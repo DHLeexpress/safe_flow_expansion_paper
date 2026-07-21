@@ -266,19 +266,19 @@ Condition \eqref{eq:dtcbf} implies the one‐step decay bound
 
 \noindent \textbf{Remark.} In order to prove $h$ is a valid DCBF, it is necessary to find a point-wise set of control values at any given state is non-empty, with corresponding $\gamma$. To be compatible with the averaging in MPPI, we assumed that in case of at least one of the perturbed control \eqref{eq:mppi_rollout} respects \eqref{eq:dtcbf} at every state during the deployment of MPPI, we only used that successful actions as a data to train the generative policy.
 \note{DCBF to BF, safe set to implicit safe set}
-We define the safety specification that is derived from a supporting hyperplane to the single obstacle. Let \(q_{k+i \mid i}\in\mathbb R^d\) denote the robot position at state \(x_{k+i \mid i}\) at discrete time step $k$ and horizon $i = 0, ..., H-1$. For a convex obstacle, let $p$ be the point on its boundary closest to the current state $q_{k\mid k}$, with outward normal $n$. We define the barrier function as
+We define the safety specification that is derived from a supporting hyperplane to the single obstacle. Let \(\mathbf{q}_{k+i \mid i}\in\mathbb R^d\) denote the robot position at state \(\mathbf{x}_{k+i \mid i}\) at discrete time step $k$ and horizon $i = 0, ..., H-1$. For a convex obstacle, let $\mathbf{p}$ be the point on its boundary closest to the current position $\mathbf{q}_{k\mid k}$, with outward normal $\mathbf{n}$. We define the barrier function as
 \begin{equation}
-h^{\mathrm{aff}}(q;\,q_{k\mid k}) :=
-\frac{n^\top(q-p)}{n^\top(q_{k\mid k}-p)}.
+h^{\mathrm{aff}}(\mathbf{q};\,\mathbf{q}_{k\mid k}) :=
+\frac{\mathbf{n}^\top(\mathbf{q}-\mathbf{p})}{\mathbf{n}^\top(\mathbf{q}_{k\mid k}-\mathbf{p})}.
 \label{eq:aff_barrier}
 \end{equation}
 The implicit safe set for each horizon $i$ is defined as
 \begin{equation}
-\mathcal{C}_i^{\mathrm{aff}}=\{x \in \mathbb{R}^{n_x} \mid h^{\mathrm{aff}}(q; q_{k\mid k})\ge 0\},\label{eq:aff_safeset}
+\mathcal{C}_i^{\mathrm{aff}}=\{\mathbf{x} \in \mathbb{R}^{n_x} \mid h^{\mathrm{aff}}(\mathbf{q}_{k+i\mid k}; \mathbf{q}_{k\mid k})\ge 0\},\label{eq:aff_safeset}
 \end{equation}
-is a half-space, which is convex. Iterating the condition \eqref{eq:dtcbf} from $i=0$ with the normalization $h^{\mathrm{aff}}(q_{k\mid k};q_{k\mid k})=1$ yields an exponentially decaying lower bound on the safety specification along the prediction horizon:
+is a half-space, which is convex. Iterating the condition \eqref{eq:dtcbf} from $i=0$ with the normalization $h^{\mathrm{aff}}(\mathbf{q}_{k\mid k};\mathbf{q}_{k\mid k})=1$ yields an exponentially decaying lower bound on the safety specification along the prediction horizon:
 \begin{equation}
-h^{\mathrm{aff}}(q_{k+i\mid k};q_{k\mid k}) \ge (1-\gamma)^i. \quad i = 0, ..., H.
+h^{\mathrm{aff}}(\mathbf{q}_{k+i\mid k};\mathbf{q}_{k\mid k}) \ge (1-\gamma)^i. \quad i = 0, ..., H.
 \label{eq:safetyspecification}
 \end{equation}
 % Applying the condition \eqref{eq:dtcbf} to this affine barrier function provides our safety specification for each rollout:
@@ -292,7 +292,7 @@ We assume that the robot can only sense obstacles within a finite radial distanc
 \end{equation}
 The implicit safe set for each horizon $i=0,\cdots,H-1$,
 \begin{equation}
-\mathcal{P}_i=\{x \in \mathbb{R}^{n_x} \mid h^{\text{poly}}(\mathbf{q}_{k+i\mid k}; \mathbf{q}_{k\mid k})\ge (1-\gamma)^i\},\label{eq:poly_safeset}
+\mathcal{C}^{\text{poly}}_i=\{\mathbf{x} \in \mathbb{R}^{n_x} \mid h^{\text{poly}}(\mathbf{q}_{k+i\mid k}; \mathbf{q}_{k\mid k})\ge (1-\gamma)^i\},\label{eq:poly_safeset}
 \end{equation}
 
 This ego-centric barrier function ensures that the robot maintains a safe distance from all obstacles throughout the prediction horizon. For example, the top of Fig. \ref{fig:polytope} illustrates safe sets \eqref{eq:aff_safeset}.
@@ -319,7 +319,7 @@ To achieve safety-critical generation, we first formulate our safe planning obje
 \right], \tag{1a} \label{eq:mppi-dcbf}\\
 \text{s.t.}\quad
 & \eqref{eq:mppi-dyn}, \ \eqref{eq:mppi-set1}, \ \eqref{eq:mppi-set2},\\
-& h^{\text{poly}}(q_{k+i\mid k}; q_{k\mid k})\ge (1-\gamma)^i. \tag{1e} \label{eq:poly}
+& h^{\text{poly}}(\mathbf{q}_{k+i\mid k}; \mathbf{q}_{k\mid k})\ge (1-\gamma)^i. \tag{1e} \label{eq:poly}
 \end{align*}
 \end{subequations}
 
@@ -390,8 +390,32 @@ Our main idea is that with some scarce, conservative safe trajectories provided 
 % } % end Repeat
 % \end{algorithm}
 % %%%%%%%%%%%%%%%%End_of_Algorithm1-%%%%%%%%%%%%%%%%
-Our proposed algorithm, model predictive path integral control with DCBF-based sample rejection (MPPI-DCBF), modifies the standard MPPI framework to formally enforce safety. The core of our method is the safety specification in \eqref{eq:poly}, which is designed to guarantee the forward invariance of the sequence of time-varying safe sets $\mathcal{P}_i$ defined in \eqref{eq:poly_safeset}. This is achieved by integrating the DCBF condition directly into the sampling step of the MPPI algorithm. Any sampled rollout that violates the condition is rejected; consequently, the optimal control sequence \eqref{eq:mppi-update} is computed as a convex combination of only those rollouts that are certified to be safe. The complete procedure is detailed in Algorithm~\ref{alg:safe-mppi}.
+Our proposed algorithm, model predictive path integral control with DCBF-based sample rejection (MPPI-DCBF), modifies the standard MPPI framework to formally enforce safety. The core of our method is the safety specification in \eqref{eq:poly}, which is designed to guarantee the forward invariance of the sequence of time-varying safe sets $\mathcal{P}_i$ defined in \eqref{eq:poly_safeset}. This is achieved by integrating the DCBF condition directly into the sampling step of the MPPI algorithm. Any sampled rollout that violates the condition is rejected; consequently, the optimal control sequence \eqref{eq:mppi-update} is computed as a convex combination of only those rollouts that are certified to be safe. Under the assumption of pointwise feasibility\footnote{For the discrete-time control affine system \eqref{eq:affinesystem} and for any initial state $x_{k|k} \in \mathcal{C}_i^\mathrm{aff}$, there exists at least one control sequence $\{u_{k+i|k}\}_{i=0}^{N-1}$ such that the resulting trajectory $\{x_{k+i|k}\}_{i=1}^{N}$ lies within the sequence of safe sets defined in \eqref{eq:aff_safeset}, i.e., $x_{k+i|k} \in \mathcal{C}_i^{\mathrm{aff}}$ for all $i \in \{1, \dots, N\}$.
+}, we can formally analyze the properties of the MPPI-DCBF averaging process.
+% The complete procedure is detailed in Algorithm~\ref{alg:safe-mppi}.
 
+\begin{proposition} \label{prop: 1}
+    For the discrete-time control affine system \eqref{eq:affinesystem}, if all contributing rollouts $(m)$ satisfy $\mathbf{x}^{(m)}_{k+1\mid k} \in \mathcal{C}_1^{\mathrm{poly}}$, then the averaged state $\mathbf{x}^*_{k+1|k}$ under the MPPI-DCBF control is also guaranteed to be in the safe set, \textit{i.e.,} $\mathbf{x}^*_{k+1|k} \in \mathcal{C}_1^{\mathrm{poly}}$.
+    
+    \begin{proof}
+    Under the control affine dynamics, the state $\mathbf{x}^{(m)}_{k+1\mid k}$ in the next time step is an affine function of the control inputs. Since the admissible inputs are a convex polytope and the control update of MPPI is a convex combination of control perturbations~\eqref{eq:mppi-update}, the resulting state $\mathbf{x}^*_{k+1\mid k}$ is a convex combination of the rollout states:
+    \begin{align}
+    \mathbf{x}^*_{k+1|k} = \sum_m \hat{\omega}_m \mathbf{x}^{(m)}_{k+1|k}, \nonumber
+    \end{align}
+    where $\hat{\omega}_m \in \mathbb{R}_{> 0}$ and $\sum_m \hat{\omega}_m = 1$ are the importance weights derived from \eqref{eq:mppi-weights} after the rejection of unsafe samples. Moreover, since the safe set $\mathcal{C}_1^{\mathrm{aff}}$ is a convex half-space, any convex combination of points within it must also lie within the set. Thus, if $\mathbf{x}^{(m)}_{k+1\mid k} \in \mathcal{C}_1^{\mathrm{poly}}$ for all $m$, it follows that $\mathbf{x}^*_{k+1|k} \in \mathcal{C}_1^{\mathrm{aff}}$.
+    \end{proof}
+\end{proposition}
+\vspace{1mm}
+
+If the dynamics of the system of interest are linear time invariant (LTI) as
+\begin{equation}
+    x_{k+1}=Ax_k + Bu_k,\label{eq:lti}
+\end{equation}
+then we can make a similar statement about safety along the \textit{entire} trajectory, rather than just a single step in the MPPI averaging process.
+
+\begin{proposition} \label{prop:2}
+For the discrete LTI system \eqref{eq:lti} under the same pointwise feasibility assumption, if all contributing rollouts $(m)$ satisfy $\mathbf{x}^{(m)}_{k+i\mid k} \in \mathcal{C}_i^{\mathrm{poly}}$ for all steps $i \in \{1, \dots, N\}$, then the entire averaged MPPI trajectory also remains within the sequence of safe sets, \textit{i.e.,} $\mathbf{x}^*_{k+i\mid k} \in \mathcal{C}_i^{\mathrm{poly}}$ for all $i$.
+\end{proposition}
 % While the proper design of terminal ingredients (\textit{i.e.,} a terminal set and cost) can formally guarantee recursive feasibility in traditional MPC, the non-convex nature of the resulting optimization problem often makes real-time implementation computationally intractable \cite{rawlings2020model}. SBPC methods such as MPPI face similar challenges. Rather than proving recursive feasibility, our approach ensures safety by enforcing DCBF constraints at each time step, which relies on the weaker but more practical condition of pointwise feasibility, formalized in the following assumption.
 % \begin{assumption}  \label{assumption_1}
 %     For the discrete-time control affine system \eqref{eq:affinesystem} and for any initial state $x_{k|k} \in \mathcal{C}_i^\mathrm{aff}$, there exists at least one control sequence $\{u_{k+i|k}\}_{i=0}^{N-1}$ such that the resulting trajectory $\{x_{k+i|k}\}_{i=1}^{N}$ lies within the sequence of safe sets defined in \eqref{eq:aff_safeset}, i.e., $x_{k+i|k} \in \mathcal{C}_i^{\mathrm{aff}}$ for all $i \in \{1, \dots, N\}$.
@@ -469,7 +493,7 @@ Our proposed algorithm, model predictive path integral control with DCBF-based s
 \subsection{Verifying predicted action via verifier polytope}
 Before we introduce our main algorithm, here we define the deterministic verifier function that ensures the trajectory respects multi-step safety. We named this polytope as \textit{verifier polytope} and separates the term with the nominal polytope \eqref{eq:poly}, and it is is constructed along the prediction horizon $H$ in its trajectory yield by the generated action. The optimization problem is solved for each nearby obstacle within the sensing region. 
 
-Concretely, let \(c=q_0\in\mathbb R^d\) denote the current robot position in the free space \(\mathcal{Q}\) and let
+\noindent \textbf{Verifier Polytope for Expansion.} Concretely, let \(c=q_0\in\mathbb R^d\) denote the current robot position in the free space \(\mathcal{Q}\) and let
 \(\{q_t\}_{t=0}^{H}\) be a candidate local trajectory submitted to verifier, with
 \(p_t:=q_t-c\).  For a barrier parameter \(\gamma\in(0,1]\), define
 \(\alpha_t=(1-\gamma)^t\) and \(\beta_t=1-\alpha_t\). We then formulate under each sensed circular obstacle that is represented as \(\mathcal O_i=\{x\in\mathbb R^d:\|x-o_i\|_2\le r_i\}\) where \(o_i\) and \(r_i\) are its center and radius. Instead of fixing the obstacle face normal, we seek to find a variable face \(\mathbf{a}_i^\top(x-c)\le m_i,\), that respects receding horizon safety \eqref{}, where \(a_i\in\mathbb R^d\) is the verifier face normal and \(m_i\in\mathbb R\)
@@ -502,11 +526,11 @@ faces, the verifier polytope has the form \footnote{In order to guarantee the bo
 % \(b_i=a_i^\top c+m_i\). 
 In this way, the validity of sampled control policies is evaluated by the existence of the verifier polytope in terms of multi-step safety, \textit{i.e., $\tilde v(\mathbf{\hat u}) =1$}.
 
-\noindent \textbf{Proposition 1.} A stochastic policy $\mathbf{u}_{k:k+H-1\mid k}$ with length $H$ produced by MPPI-DCBF~\eqref{eq:mppi-dcbf}, which is the constrained stochastic optimization problem solution under the outward normal $n$ from \eqref{eq:aff_barrier}, is a valid multi-step samples:
+\begin{proposition} \label{prop: 2}A stochastic policy $\mathbf{u}_{k:k+H-1\mid k}$ with length $H$ produced by MPPI-DCBF~\eqref{eq:mppi-dcbf}, which is the constrained stochastic optimization problem solution under the outward normal $n$ from \eqref{eq:aff_barrier}, is a valid multi-step samples:
 \begin{equation*}
-\tilde v(\mathbf{u}_{k:k+H-1\mid k) =1
+\tilde v(\mathbf{u}_{k:k+H-1\mid k)} =1
 \end{equation*}
-
+\end{proposition}
 \subsection{Safe Flow Expansion}
 Generative policies constrain actions to the distribution of their demonstrations. Their behavior is usually limited to the dominant modes present in the demonstration data. This becomes problematic in OOD scenarios, where the model encounters states unseen during training. To address this distribution shift, recent large-scale imitation learning frameworks attempt to gather massive amounts of human intervention data to fill the coverage gaps \cite{}. However, this brute-force data-collection paradigm is inherently unscalable for capturing all possible safety-critical actions. To this end, we can utilize the self-generation of the generative policies that can query safe actions and one can \textit{expand} the region likely to be sampled from a pre-trained generative model~ \cite{de2026active}. 
 
