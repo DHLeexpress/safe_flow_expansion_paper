@@ -1,0 +1,122 @@
+% %%%%%%%%%%%%%%%%Start_of_Algorithm2-%%%%%%%%%%%%%%%%
+% \begin{algorithm}[H]
+% \caption{Conditional Flow Matching for Safety-tunable Policy Generation}\label{alg:cfm}
+% \SetKwInOut{Input}{Input}\SetKwInOut{Training}{Training---}\SetKwInOut{Inference}{Inference---}
+
+% \Training{
+
+% Repeat for each collision-free trajectory with a moving horizon until convergence
+
+% \Input{
+
+% trajectory dataset $\mathcal{D}=\{(z_t=u^*_{t\mid t},o_t,\gamma_t)\}_{t=0}^{T-1}$, moving horizon $H$, initial $p_0=\mathcal{N}(0,I)$;\; sequential encoder $g_\psi$ (context), flow matching model $u_t^\theta(x\mid o,\gamma,c)$, step $\alpha$}
+
+% }
+% \ForEach{$\tau=\{(z_t,o_t,\gamma_t)\}_{t=0}^{T-1}\in\mathcal{D}$}{
+%   \Repeat{scenario converged}{
+%     \For{$t=0$ \KwTo $T-1$}{
+%       $c_t \leftarrow g_\psi\!\big(\{(z_j,o_j,\gamma_j)\}_{j=\max(0,t-H+1)}^{t}\big)$ 
+      
+%       \tcp*[h]{$\triangleright$ encode the context}
+      
+%       sample $t\sim\mathrm{Unif}[0,1]$, $\epsilon\sim\mathcal{N}(0,I)$
+      
+%       set $x=t\,z_t+(1-t)\epsilon$;
+
+%       \tcp*[h]{$\triangleright$ optimal transport path}
+      
+%       target $u_t^*(x\mid z_t)=z_t-\epsilon$
+
+%       % \tcp*[h]{$\triangleright$ conditional flow matching}
+
+      
+      
+%       $\theta\leftarrow\theta-\alpha\nabla_\theta\|u_t^\theta(x\mid o_t,\gamma_t,c_t)-u_t^*(x\mid z_t)\|^2$\;
+%     }
+%   }
+% }
+
+% \Inference{
+
+% policy generation with scheduled $\gamma$ and online context}
+% \Input{
+% system model $f(x,u)$,\; observation map $o(x^{\mathrm{sys}})$, sequential encoder $g_\psi$, step size $\Delta t$, ODE step $L$, schedule $\gamma(k)$, initial robot state $x^{\mathrm{sys}}(0)$}
+
+% \textbf{Output:}{ generated control policy $\hat u_{k}$.}
+
+% Initialize: time step $k=0$, robot state $x^{\mathrm{sys}}_0=x^{\mathrm{sys}}(0)$
+
+% \While{not converged}{
+
+%     $o_k\leftarrow o(x_k^{\mathrm{sys}})$
+    
+%     $c_k\leftarrow g_\psi\!\big(\hat u_j,o_j,\gamma_j)\}_{j=\max(0,k-H+1)}^{k}\big)$ 
+
+%     $\gamma_k = \gamma (o_k)$
+    
+%     \tcp*[h]{$\triangleright$ safety parameter scheduling}
+
+%     Draw a sample $x_0\sim p_0$
+    
+%     \For{$\ell=0$ \KwTo $L-1$}{
+%     $t_\ell=\ell/L$; $x_{\ell+1}=x_\ell+\Delta t\,u_{t_\ell}^\theta\!\big(x_k\mid o_k,\gamma_k,c_k\big)$ 
+  
+%   \tcp*[h]{$\triangleright$ simulate from learned ODE}
+%   }
+%   Set $\hat u_k = x_{L}$
+  
+%   \tcp*[h]{$\triangleright$ generate policy}
+  
+%   $x^{\mathrm{sys}}_{k+1}=f(x^{\mathrm{sys}}_k,\hat u_k)$; $k = k+1 $
+% }
+% \end{algorithm}
+% %%%%%%%%%%%%%%%%Start_of_Algorithm2-%%%%%%%%%%%%%%%%
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+
+
+
+
+% 0. Algorithm (uncertainty of the policy -> expand via verifier)
+% 1, Verifier definition
+% 2. Buffer and batches
+% 3. Update the CFM loss
+% Define 'modes' 
+
+
+% This becomes particularly useful in safety critical settings. First, we can reduce the trade-off between aggressiveness and conservatism of generative model that is pre-trained on any planner. Second, if that trade-off can be modulated as a form of conditioning variables in generative model, we can adaptively tune the level of the performance and the safety implicitly. We alluded to this condition as a safety parameter $\gamma$ that is introduced in the \ref{sec:}. Lastly, we can discover and generate different modes in the OOD scenario that pre-trained model cannot address. The key question left here is then \textit{"What are the valid self-generated actions?}
+
+% The validity $v(\mathbf{\hat u})$ of the generated action $\mathbf{\hat u}$ can be viewed as the mathematical indicator function to check if the action is contributing to the local performance and safety. In our work, we assume the self-generated action sequences are valid (\textit{i.e.,} $v(\mathbf{\hat u})$ = 1) if these conditions are met:
+% \begin{enumerate}
+%   \item multi-step safety based on \textit{verifier polytope} \eqref{eq:eq:socp},
+%   \item progress toward a terminal state,
+%   \item remains in constraint set and terminates in terminate set.
+% \end{enumerate}
+
+% During the safe flow expansion, we assumed that these three components are aligned for generalizability, stabilty and plasticity of the learning:
+% \begin{enumerate}
+%     \item Data: the pretrained policy must encode enough spatial/safety structure to generalize;
+%     \item Representation: the representation of the generative policy can be captured via uncertainty estimator (\textit{e.g.,} linear kernel over the learned vector field).
+%     \item Optimization: To generalize to high uncertainty action samples without catastrophic forgetting of the pre-trained data, ...
+% \end{enumerate}
+
+
+
+% \begin{equation}
+% \mathbf{\hat u}_{k:k+H-1}\sim\arg\max_{q}\ 
+% \mathbb{E}_{x\sim q}\big[\sigma_t(\phi_s(x))\big]-\beta\,\mathrm{KL}\big(q\,\|\,p_1^{\theta_t}\big),
+% \label{eq:afe9}
+% \end{equation}
+
+
+% \begin{equation}
+% \mathcal{L}(\theta)\!=\!
+% \mathbb{E}_{\substack{
+% t\sim \mathrm{Unif}[0,1],\\ \epsilon\sim\mathcal{N}(0,I_d),\\
+% (z,o,\gamma,c)\sim p_{\mathrm{data}}(z,o,\gamma,c),\\ x\sim p_t(\cdot\mid z)
+% }}
+% \!\!\!\!\Bigl[\bigl\|u_t^\theta(x\!\mid\! o,\gamma, c)-(z-\epsilon)\bigr\|^2\Bigr].
+% \label{eq:cfm_cost}
+% \end{equation}
+

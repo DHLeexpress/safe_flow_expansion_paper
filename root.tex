@@ -36,7 +36,7 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \title{\LARGE \bf
-Safe Flow Expansion: \\Distilling Safety-Critical Planning into Generative Policies
+Safe Flow Expansion: \\Self-generating Safety-Critical Planning in Generative Policies
 }
 % Generative Robotic Control with Tunable Safety: \\Flow Matching for Safety-Critical Tasks
 
@@ -68,6 +68,14 @@ Despite these advantages, SBPCs such as MPPI inherently struggle with safety gua
 This limitation motivates our goal to integrate safety-critical constraints explicitly into the SBPC frameworks.
 % \note{Need a brief sentence and an reference about safety filters at the beginning of the next paragraph.}
 A common method to ensure safety in collision avoidance tasks is to employ a safety filter, which minimally modifies the output of a potentially unsafe nominal controller to guarantee the satisfaction of the constraints \cite{ames2014cbf}. However, a simple safety filter applied \textit{only} to the control output is insufficient to guarantee safety due to the tight coupling between control objectives and long-term safety criteria that are potentially conflicting. Previous works have used control Lyapunov functions (CLF) and control barrier functions (CBF), often with relaxation factors, to solve this issue as an optimization problem, for mediating safety and feasibility \cite{ames2016control, zeng2021enhancing}, or solve the optimization problem in the context of model predictive control (MPC) to take future information into account over a longer horizon \cite{zeng2021safety}. Recent works have encoded this concept through predictive safety filters, which leverage predictive CBFs in layered control architectures \cite{compton2024learning}. However, in cluttered environments, this direct optimization often becomes non-convex and intractable.
+
+\begin{figure}
+    \centering
+    \includegraphics[width=0.99\linewidth]{images/verifier_v2.pdf}
+    \vspace{-2.5mm}
+    \caption{Framework}
+    \label{fig:polytope}
+\end{figure}
 
 This computational burden motivates a shift from online constrained optimization to learning-based control, where complex planning is performed offline to curate datasets of safe, multi-modal behavior. Generative models, such as diffusion and flow matching, can synthesize motion trajectories from diverse, high-dimensional demonstrations \cite{kurtz2025generative, chi2023diffusion}. However, they do not natively provide formal safety guarantees during rollout. Previous work attempts to encode safety by conditioning or regularizing generation \cite{dai2025safefm, carvalho2023mpdiffusion}, but deployments still lack mechanisms to systematically trade off safety and feasibility. This can be critical in real-world tasks where the robot must adjust caution to context. Recent works have incorporated MPC into refinement of generation to guarantee local optimality in its multi-modal behavior that is induced by reward-based guidance \cite{mizuta2025unified}. This allows generative methods to account for safety and feasibility, but it can struggle to generalize to out-of-distribution (OOD) environments, because this reward-tilting can over-optimize the learned distribution \cite{dandapanthula2026we}.
 
@@ -558,107 +566,19 @@ To self-generate the sample to be informative about the verifier polytope while 
 \end{equation}
 where $Z$ is the normalization $\int p(\mathbf{\hat u})\exp\!\big(f(\mathbf{\hat u})/\beta\big)\,dx$, with $f(\mathbf{\hat u}):=\sigma_t(\phi_s(\mathbf{\hat u}))$, $p:=p_1^{\theta_t}$. Notably, $\phi_s(\mathbf{\hat u})$ is a noised flow representation, which is modeled as the penultimate hidden activation (the feature before the head of the target conditional flow matching vector field). 
 
-% %%%%%%%%%%%%%%%%Start_of_Algorithm2-%%%%%%%%%%%%%%%%
-% \begin{algorithm}[H]
-% \caption{Conditional Flow Matching for Safety-tunable Policy Generation}\label{alg:cfm}
-% \SetKwInOut{Input}{Input}\SetKwInOut{Training}{Training---}\SetKwInOut{Inference}{Inference---}
-
-% \Training{
-
-% Repeat for each collision-free trajectory with a moving horizon until convergence
-
-% \Input{
-
-% trajectory dataset $\mathcal{D}=\{(z_t=u^*_{t\mid t},o_t,\gamma_t)\}_{t=0}^{T-1}$, moving horizon $H$, initial $p_0=\mathcal{N}(0,I)$;\; sequential encoder $g_\psi$ (context), flow matching model $u_t^\theta(x\mid o,\gamma,c)$, step $\alpha$}
-
-% }
-% \ForEach{$\tau=\{(z_t,o_t,\gamma_t)\}_{t=0}^{T-1}\in\mathcal{D}$}{
-%   \Repeat{scenario converged}{
-%     \For{$t=0$ \KwTo $T-1$}{
-%       $c_t \leftarrow g_\psi\!\big(\{(z_j,o_j,\gamma_j)\}_{j=\max(0,t-H+1)}^{t}\big)$ 
-      
-%       \tcp*[h]{$\triangleright$ encode the context}
-      
-%       sample $t\sim\mathrm{Unif}[0,1]$, $\epsilon\sim\mathcal{N}(0,I)$
-      
-%       set $x=t\,z_t+(1-t)\epsilon$;
-
-%       \tcp*[h]{$\triangleright$ optimal transport path}
-      
-%       target $u_t^*(x\mid z_t)=z_t-\epsilon$
-
-%       % \tcp*[h]{$\triangleright$ conditional flow matching}
-
-      
-      
-%       $\theta\leftarrow\theta-\alpha\nabla_\theta\|u_t^\theta(x\mid o_t,\gamma_t,c_t)-u_t^*(x\mid z_t)\|^2$\;
-%     }
-%   }
-% }
-
-% \Inference{
-
-% policy generation with scheduled $\gamma$ and online context}
-% \Input{
-% system model $f(x,u)$,\; observation map $o(x^{\mathrm{sys}})$, sequential encoder $g_\psi$, step size $\Delta t$, ODE step $L$, schedule $\gamma(k)$, initial robot state $x^{\mathrm{sys}}(0)$}
-
-% \textbf{Output:}{ generated control policy $\hat u_{k}$.}
-
-% Initialize: time step $k=0$, robot state $x^{\mathrm{sys}}_0=x^{\mathrm{sys}}(0)$
-
-% \While{not converged}{
-
-%     $o_k\leftarrow o(x_k^{\mathrm{sys}})$
-    
-%     $c_k\leftarrow g_\psi\!\big(\hat u_j,o_j,\gamma_j)\}_{j=\max(0,k-H+1)}^{k}\big)$ 
-
-%     $\gamma_k = \gamma (o_k)$
-    
-%     \tcp*[h]{$\triangleright$ safety parameter scheduling}
-
-%     Draw a sample $x_0\sim p_0$
-    
-%     \For{$\ell=0$ \KwTo $L-1$}{
-%     $t_\ell=\ell/L$; $x_{\ell+1}=x_\ell+\Delta t\,u_{t_\ell}^\theta\!\big(x_k\mid o_k,\gamma_k,c_k\big)$ 
-  
-%   \tcp*[h]{$\triangleright$ simulate from learned ODE}
-%   }
-%   Set $\hat u_k = x_{L}$
-  
-%   \tcp*[h]{$\triangleright$ generate policy}
-  
-%   $x^{\mathrm{sys}}_{k+1}=f(x^{\mathrm{sys}}_k,\hat u_k)$; $k = k+1 $
-% }
-% \end{algorithm}
-% %%%%%%%%%%%%%%%%Start_of_Algorithm2-%%%%%%%%%%%%%%%%
-% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-
 \section{Safe Flow Expansion}
-% 0. Algorithm (uncertainty of the policy -> expand via verifier)
-% 1, Verifier definition
-% 2. Buffer and batches
-% 3. Update the CFM loss
-% Define 'modes' 
 
-
-% This becomes particularly useful in safety critical settings. First, we can reduce the trade-off between aggressiveness and conservatism of generative model that is pre-trained on any planner. Second, if that trade-off can be modulated as a form of conditioning variables in generative model, we can adaptively tune the level of the performance and the safety implicitly. We alluded to this condition as a safety parameter $\gamma$ that is introduced in the \ref{sec:}. Lastly, we can discover and generate different modes in the OOD scenario that pre-trained model cannot address. The key question left here is then \textit{"What are the valid self-generated actions?}
-
-% The validity $v(\mathbf{\hat u})$ of the generated action $\mathbf{\hat u}$ can be viewed as the mathematical indicator function to check if the action is contributing to the local performance and safety. In our work, we assume the self-generated action sequences are valid (\textit{i.e.,} $v(\mathbf{\hat u})$ = 1) if these conditions are met:
-% \begin{enumerate}
-%   \item multi-step safety based on \textit{verifier polytope} \eqref{eq:eq:socp},
-%   \item progress toward a terminal state,
-%   \item remains in constraint set and terminates in terminate set.
-% \end{enumerate}
-
-% During the safe flow expansion, we assumed that these three components are aligned for generalizability, stabilty and plasticity of the learning:
-% \begin{enumerate}
-%     \item Data: the pretrained policy must encode enough spatial/safety structure to generalize;
-%     \item Representation: the representation of the generative policy can be captured via uncertainty estimator (\textit{e.g.,} linear kernel over the learned vector field).
-%     \item Optimization: To generalize to high uncertainty action samples without catastrophic forgetting of the pre-trained data, ...
-% \end{enumerate}
+\begin{figure}
+    \centering
+    \includegraphics[width=0.99\linewidth]{images/demo_report_static_v0.pdf}
+    \vspace{-2.5mm}
+    \caption{Quantitative comparison of safe flow expansion round counts versus collision rate, validity, minimum clearance, and time-to-goal. Safe flow expansion decreases trajectory-wise collision rate (25\%  to 0.1\%), increases action-wise validity (30\% to 85\%). (TODO: update with the latest result)}
+    \label{fig:polytope}
+\end{figure}
 
 \begin{algorithm}[H]
+\caption{Safe Flow Expansion}
+\label{alg:sfe}
 \SetKwInOut{Input}{Input}\SetKwInOut{Output}{Output}
 \Input{pretrained $\mu_{\theta_0}$, SOCP verifier $\tilde v$~\eqref{eq:socp}, rounds $T$, grid $\{\gamma\}$}
 \Output{expanded $\mu_{\theta^\star}$ at peak certified coverage}
@@ -673,33 +593,19 @@ $\mathcal D_0\gets$ verified broad proposals\tcp*{seed distinct maneuvers}
   $\theta_{t+1}\gets\textsc{UpdateFlow}(\theta_t,\mathcal D_{t+1})$\;
   evaluate certified coverage; keep the peak round\;
 }
-\caption{Safe Flow Expansion}
-\label{alg:sfe}
 \end{algorithm}
 
+\note[Dohyun]{If we present the system as a reduced-order model, the real robot is still governed by a more complicated full-order system. So we need to be clear about the modeling gap. Later safety claims depend on how well the reduced-order trajectory can be tracked by the full-order system. We could add this uncertainty later, but it should be acknowledged.}
 
-% \begin{equation}
-% \mathbf{\hat u}_{k:k+H-1}\sim\arg\max_{q}\ 
-% \mathbb{E}_{x\sim q}\big[\sigma_t(\phi_s(x))\big]-\beta\,\mathrm{KL}\big(q\,\|\,p_1^{\theta_t}\big),
-% \label{eq:afe9}
-% \end{equation}
-
-
-% \begin{equation}
-% \mathcal{L}(\theta)\!=\!
-% \mathbb{E}_{\substack{
-% t\sim \mathrm{Unif}[0,1],\\ \epsilon\sim\mathcal{N}(0,I_d),\\
-% (z,o,\gamma,c)\sim p_{\mathrm{data}}(z,o,\gamma,c),\\ x\sim p_t(\cdot\mid z)
-% }}
-% \!\!\!\!\Bigl[\bigl\|u_t^\theta(x\!\mid\! o,\gamma, c)-(z-\epsilon)\bigr\|^2\Bigr].
-% \label{eq:cfm_cost}
-% \end{equation}
-\note[Dohyun]{If we present the system as a reduced order model, the real robot is still goverend by a more complicated full-order system. So we need to be clear about the modeling gap.Later safety claims depend on how well the reduced-order trajectory can be tracked by the full-order system. We could add this uncertainty later, but it should be acknowledged.}
-\note[Dohyun]{For a double-integrator system, safety cannot be certified only from position-level containment.}
-
+\begin{figure}
+    \centering
+    \includegraphics[width=0.99\linewidth]{images/sfm_v0.pdf}
+    \vspace{-2.5mm}
+    \caption{Qualitative comparison of each method in the SFM environment.}
+    \label{fig:polytope}
+\end{figure}
 
 \section{Numerical Examples}
-\note{Uncertainty estimation on random valid samples}
 We evaluate Safe Flow Expansion on the 2-D goal-reaching task of Fig. \ref{fig:rollouts} in [0,5]x[0,5]. The base model uses a vanilla flow-matching velocity network of a single MLP with 3 hidden layers, conditioned on the input of (i) a 5-dimensional state (the relative goal position, the velocity, and the safety level $\gamma$), (ii) a 32-dim obstacle embedding that encodes nominal polytope barrier function in 32 x 32 discretized grids, and output 20-dim predicted action sequences. The 32-dim penultimate representation at time step s = 0.9 gives the flow representation for the uncertainty estimation. 
 The model is pre-trained on SafeMPPI expert demonstrations that seed the initial condition off-diagonal region ($|y - x|>1$) with the same goal, 200k of window length of $H$.
 %, employing Adam with learning rate $1 \times 10^{-4}$, batch 64, and 4 inner steps. 
