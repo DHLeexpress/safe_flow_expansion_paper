@@ -36,7 +36,7 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \title{\LARGE \bf
-Safe Flow Expansion: \\Self-generating Safety-Critical Planning in Generative Policies
+Safe Flow Expansion: \\ Generative Model Self-Generating Safety-Critical Planning
 }
 % Generative Robotic Control with Tunable Safety: \\Flow Matching for Safety-Critical Tasks
 
@@ -566,8 +566,6 @@ To self-generate the sample to be informative about the verifier polytope while 
 \end{equation}
 where $Z$ is the normalization $\int p(\mathbf{\hat u})\exp\!\big(f(\mathbf{\hat u})/\beta\big)\,dx$, with $f(\mathbf{\hat u}):=\sigma_t(\phi_s(\mathbf{\hat u}))$, $p:=p_1^{\theta_t}$. Notably, $\phi_s(\mathbf{\hat u})$ is a noised flow representation, which is modeled as the penultimate hidden activation (the feature before the head of the target conditional flow matching vector field). 
 
-\section{Safe Flow Expansion}
-
 \begin{figure}
     \centering
     \includegraphics[width=0.99\linewidth]{images/demo_report_static_v0.pdf}
@@ -594,6 +592,11 @@ $\mathcal D_0\gets$ verified broad proposals\tcp*{seed distinct maneuvers}
   evaluate certified coverage; keep the peak round\;
 }
 \end{algorithm}
+
+\subsection{Adaptation law on safety parameter}
+Since the generative model learns a continuous mapping, it can interpolate between its distinct safe behaviors based on the conditioning safety parameter, $\gamma$. This enables the synthesis of novel control strategies by implementing a dynamic schedule for $\gamma(k)$ at inference time.
+
+\note{Proposing gamma scheduling now can handle the performance side.}
 
 \note[Dohyun]{If we present the system as a reduced-order model, the real robot is still governed by a more complicated full-order system. So we need to be clear about the modeling gap. Later safety claims depend on how well the reduced-order trajectory can be tracked by the full-order system. We could add this uncertainty later, but it should be acknowledged.}
 
