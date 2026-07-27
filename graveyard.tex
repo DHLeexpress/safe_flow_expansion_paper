@@ -120,3 +120,110 @@
 % \label{eq:cfm_cost}
 % \end{equation}
 
+
+% \section{Numerical Examples}
+% In this section, we demonstrate the effectiveness of the
+% proposed framework using two simulation examples. During the experiments, all data generation and model training were performed on a workstation equipped with an NVIDIA H100 NVL GPU.
+% \subsection{2D Double Integrator model}
+% Consider a linear discrete-time 2D double integrator
+% \begin{equation}
+%     x_{k+1}=Ax_k + Bu_k.
+% \end{equation}
+% To generate a dataset for policy learning, we first employ our proposed MPPI-DCBF planner (Algorithm~\ref{alg:safe-mppi}) with a sampling time of $\Delta t=0.1s$. The environment consists of a fixed start at $(-5,-5)$ and a goal at $(0,0)$, populated with 1 to 10 randomly positioned circular obstacles. This domain randomization creates a challenging scenario where a single set of tuned cost penalties for a baseline planner is unlikely to generalize effectively across all configurations. Our planner produces a rich dataset of multi-modal collision-free trajectories by varying the safety parameter $\gamma \in (0,1]$. As shown in the top row of Fig.~\ref{fig:results_2d}, lower values of $\gamma$ lead to more conservative, wide-berth maneuvers, while higher values produce more aggressive maneuvers with tighter obstacle clearance.
+% \begin{figure}[!t]
+%   \centering
+%       \includegraphics[width=\linewidth]{images/flowmatching_v2.pdf}
+%   \caption{
+%       Flow matching transforms a simple noise distribution into a target data distribution of safe control policies. \textbf{Without context}, the learned vector field averages all behaviors into a single mode, leading to a greedy, goal-seeking policy (note the concentrated, goal-directed samples at $t=0.75$). \textbf{With context}, the model learns to distinguish between different situations (e.g., passing an obstacle on the left vs. right), enabling it to generate multi-modal, detouring maneuvers.
+%     }
+%     \vskip -0.4 true in
+%   \label{fig:flowmatching}
+% \end{figure}
+
+% Before training a policy, we benchmark the performance of our MPPI-DCBF planner against a baseline MPPI controller for the single obstacle case, with results summarized in Table~\ref{tab:mppi_eval}. Both controllers solve the optimal control problem in \eqref{eq:sc-mppi} with identical quadratic cost weights ($Q_p=100I_2, Q_v=10I_2, R=0.05I_2, P_p=1000I_2,$ and $P_v=100I_2$, where the subscripts $p$ and $v$ denote position and velocity, respectively). The baseline MPPI uses an additional penalty-based running cost as in~\eqref{eq:mppisoftconstraint}, $q_{\text{obs}}(x) = 5\cdot10^4 \cdot \mathbf{1}[d_{min}(x)<0] + 100 e^{-d_{min}(x)}$. Analysis of the results reveals several key insights. Most notably, our MPPI-DCBF consistently achieves superior safety guarantees compared to the baseline MPPI method, even at a shorter prediction horizon with lower control cost. Importantly, this comes at a minor computational overhead (2-3 ms per step), indicating that safety is achieved without sacrificing performance.
+% % However, we observed that for multi-obstacle cases, (Here say something about multi-obstacle failures)
+
+% \begin{table}[t]
+% \caption{MPPI~\cite{williams2017model} and MPPI-DCBF benchmark in terms of computation time, success rate, minimum clearance, and control cost integral. $N$ denotes the prediction horizon for both algorithms.}
+% \label{tab:mppi_eval}
+% \begin{center}
+% \begin{tabular}{|l||c|c|c|c|}
+% \hline
+% % \multicolumn{5}{|c|}{\textbf{Task: Single obstacle}}\\
+% % \hline
+% $N=7$ & \shortstack{Comp.\\time [ms]} & \shortstack{Success\\rate [\%]} & \shortstack{Minimum\\distance [m]} & \shortstack{Cost\\Integral} \\
+% \hline
+% MPPI & 3.6±0.0 & 61.6 & 0.12±0.22 & 1.15±0.29 \\
+% \shortstack{MPPI-DCBF\\$(\gamma{=}\,0.1)$} & 5.8±0.0 & 100.0 & 0.65±0.08 & 1.16±0.24 \\
+% \shortstack{MPPI-DCBF\\$(\gamma{=}\,0.2)$} & 5.9±0.0  & 100.0 & 0.40±0.11 & 1.10±0.27 \\
+% \shortstack{MPPI-DCBF\\$(\gamma{=}\,1.0)$} & 5.8±0.0  & 100.0 & 0.22±0.15 & 1.04±0.27 \\
+% \hline
+% $N=11$ & \shortstack{Comp.\\time [ms]} & \shortstack{Success\\rate [\%]} & \shortstack{Minimum\\distance [m]} & \shortstack{Cost\\Integral} \\
+% \hline
+% MPPI & 5.3±0.0 & 100.0 & 0.14±0.09 & 1.91±0.19 \\
+% \shortstack{MPPI-DCBF\\$(\gamma{=}\,0.1)$} & 8.9±0.0 & 100.0 & 0.98±0.06 & 1.82±0.11 \\
+% \shortstack{MPPI-DCBF\\$(\gamma{=}\,0.2)$} & 8.9±0.0 & 100.0 & 0.66±0.05 & 1.77±0.11 \\
+% \shortstack{MPPI-DCBF\\$(\gamma{=}\,1.0)$} & 8.9±0.0 & 100.0 & 0.42±0.06 & 1.77±0.15 \\
+% \hline
+% \end{tabular}
+% \end{center}
+% \vskip -0.2 true in
+% \end{table}
+
+% We learn these multi-modal behaviors by training the conditional flow matching model, where the bottom row of Fig.~\ref{fig:results_2d} demonstrates that the generative policy successfully reproduces these distinct modalities for different fixed values of $\gamma$. Since the model learns a continuous mapping, it can interpolate between its distinct behaviors seen during training. This enables the synthesis of novel control strategies by implementing a dynamic schedule for $\gamma(k)$ at inference time. Here, we design a heuristic schedule:
+% \begin{equation}
+% \label{eq:gamma-schedule}
+% \gamma(k)=\gamma_{\min}
+% +\big(\gamma_{\max}-\gamma_{\min}\big)\,\Big(1-e^{-\beta\, d(k)}\Big)\;e^{-\alpha\,\max\{0,\,v(k)\}}\,,
+% \end{equation}
+% where $d(k)$ is the distance to the nearest obstacle, $v(k)$ is the relative velocity towards it, and sensitivity parameters $\alpha, \beta$ were fine-tuned to be $0.136, 1.151$, respectively. This schedule is designed to increase conservatism (\textit{i.e.,} lowers $\gamma$) as the robot approaches an obstacle. Fig.~\ref{fig:result_chart} summarizes the performance of the policy over 1000 randomized trials, showing that our adaptive policy achieves a strong balance between safety and feasibility in terms of minimum clearance and success rate. An illustrative example of this behavior in a cluttered environment is shown in Fig.~\ref{fig:result_adaptive}. However, learning an optimal schedule remains an open problem.
+% \subsection{Quadrotor}
+% \begin{figure}[t]
+% \centering
+% \includegraphics[width=\linewidth]{images/results_chart_v1.pdf}
+% \vspace{-.2cm}
+% \caption{Performance of the learned generative policy over 1000 randomized trials across four key metrics. The first four bars in each plot correspond to policies using a fixed safety parameter (${\gamma\in\{0.1,0.2,0.5,1.0\}}$). The final hatched bar shows the performance of our adaptive schedule from~\eqref{eq:gamma-schedule}.}
+% \label{fig:result_chart}
+% \end{figure}
+
+% \begin{figure}[t]
+%   \centering
+%   \includegraphics[width=\linewidth]{images/results_adaptive_v2.png}
+%   \vspace{-.2cm}
+%   \caption{Trajectories generated by the learned generative policy in a single environment under fixed ($\gamma =0.1, 1.0$) and our adaptive $\gamma$ schedule from~\eqref{eq:gamma-schedule}.}
+%   \label{fig:result_adaptive}
+%   \vskip -0.2 true in
+% \end{figure}
+
+% To demonstrate the scalability of our data generation approach to more complex, nonlinear systems, we apply MPPI-DCBF to a simulated quadrotor. The dynamics follow \cite{lee2010geometric}, augmented with second-order motor dynamics:
+% % Quadrotor with 2nd-order motor dynamics (compact form)
+% \begin{align}
+% \frac{d}{dt}\begin{bmatrix}
+%     \mathbf{p}\\\mathbf{v}\\ \mathbf{q}\\ \boldsymbol{\omega}\\ \mathbf{w}\\ \dot{\mathbf{w}}\\
+% \end{bmatrix}=
+% \begin{bmatrix}
+% \mathbf{v} \\[0.5mm]
+% -\,g\,\mathbf{e}_3 +\frac{1}{m}\,\mathbf R(\mathbf{q})\mathbf{e}_3 \mathbf T(\mathbf{w})\\[0.5mm]
+% \tfrac{1}{2}\,\mathbf{q}\otimes(0,\boldsymbol{\omega}) \\[0.5mm]
+% -\,\mathbf{J}^{-1}\!\big(\boldsymbol{\omega}\times\mathbf{J}\boldsymbol{\omega}\big)+\mathbf{J}^{-1}\mathbf{M(\mathbf{w})} \\[0.5mm]
+% \dot{\mathbf{w}} \\[0.5mm]
+% -\tfrac{2\zeta}{\tau}\,\dot{\mathbf{w}} - \tfrac{1}{\tau^{2}}\,\mathbf{w}
+% \end{bmatrix}
+% +
+% \begin{bmatrix}
+% \mathbf{0} \\ \mathbf{0} \\ \mathbf{0} \\ \mathbf{0} \\ \mathbf{0} \\ \mathbf{I}_4
+% \end{bmatrix}\,\mathbf{u}.
+% \label{eq:quad_affine}
+% \end{align}
+% \noindent where $\mathbf{p}=(x,y,z)\in \mathbb{R}^3$ is the quadrotor's center of mass in the inertial frame, $\mathbf{v}\in\mathbb{R}^3$ is its linear velocity, $\mathbf{q}\in\mathbb{S}^3$ is a quaternion representing body orientation, $\mathbf R(\mathbf{q})\in SO(3)$ is the rotation matrix corresponding to $\mathbf{q}$, $\boldsymbol{\omega}\in\mathbb{R}^3$ is the body angular velocity, $m$ is the total quadrotor mass, $g$ is the gravitational constant, and $\mathbf{J}$ is the matrix of inertia of the body, $\mathbf{e}_3$ is the inertial axis $z$. Motor dynamics are modeled as a second-order system with damping ratio $\zeta$ and time constant $\tau$. With proper scaling, we assume that the input command $\mathbf{u}$ drives the dynamics of the four rotor speeds $\mathbf{w}\in\mathbb{R}^4$. The total thrust $T(\mathbf{w})$, and body moments $\mathbf{M}(\mathbf{w})\in\mathbb{R}^3$, are functions of the resulting rotor speeds.
+
+% Given the high dimensionality and nonlinearity of the system, we employ the one-step predictive safety check mode of our algorithm. In this model, the input command affects the system only through a linear second-order motor model. Since the thrust and moments are evaluated as a function of rotor speed, the discrete dynamics obtained from Euler discretization of the original dynamics are control affine in the current command for a single step. Therefore, the resulting state from the MPPI-DCBF controller remains safe for the next step, as established in Proposition~\ref{prop: 1}. Our planner effectively navigates the quadrotor through a dense field of spherical obstacles, as shown in Fig.~\ref{fig:result_3d}, demonstrating that our core principle can be extended to challenging, nonlinear systems.
+
+% \begin{figure}[t]
+%   \centering
+%   \includegraphics[width=\linewidth]{images/results_3d_v1.pdf}
+%   \vspace{-.2cm}
+%   \caption{Demonstration of the MPPI-DCBF planner on a quadrotor \eqref{eq:quad_affine} navigating a cluttered 3D environment.}
+%   \label{fig:result_3d}
+%   \vskip -0.2 true in
+% \end{figure}
