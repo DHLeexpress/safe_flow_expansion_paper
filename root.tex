@@ -1,8 +1,18 @@
 \documentclass[letterpaper, 10 pt, conference]{ieeeconf} 
 \IEEEoverridecommandlockouts
 \overrideIEEEmargins
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 % For the author's convenience
+\usepackage{cleveref}
+\newcommand{\qedHere}{\tag*{$\blacksquare$}}
+\newtheorem{theorem}{Theorem}
+\newtheorem{lemma}{Lemma}
+\newtheorem{proposition}{Proposition}
+\newtheorem{corollary}{Corollary}
+\newtheorem{definition}{Definition}
+\newtheorem{remark}{Remark}
+\newtheorem{assumption}{Assumption}
+\newtheorem{example}{Example}
 \usepackage{amsmath}
 \usepackage{xcolor}
 \usepackage{hyperref}
@@ -18,8 +28,6 @@
 \usepackage{float}
 \graphicspath{{images/}}
 \newtheorem{assumption}{Assumption}
-\newtheorem{proposition}{Proposition}
-\usepackage{cleveref}
 % \renewcommand{\qedsymbol}{$\blacksquare$}
 
 % \algrenewcommand\algorithmiccomment[1]{\hfill{\footnotesize\textsf{#1}}} % inline notes
@@ -282,7 +290,8 @@ Condition \eqref{eq:dtcbf} implies the one‐step decay bound
 \end{equation*}
 \textit{i.e.,} the lower bound on the barrier value decays exponentially with base $(1-\gamma)$, ensuring forward invariance of $\mathcal{C}$ \cite{ames2014cbf,agrawal2017discrete}.
 
-\noindent \textbf{Remark 1.} In order to prove $h$ is a valid DCBF, it is necessary to find a point-wise set of control values at any given state that is non-empty, with corresponding $\gamma$. To be compatible with the averaging in MPPI, we assumed that all rollouts \eqref{eq:mppi_rollout} assigned nonzero MPPI weight after rejection based on \eqref{eq:dtcbf}. In practice, we only used feasible sets of actions as data to train the generative policy.
+\begin{remark} In order to prove $h$ is a valid DCBF, it is necessary to find a point-wise set of control values at any given state that is non-empty, with corresponding $\gamma$. To be compatible with the averaging in MPPI, we assumed that all rollouts \eqref{eq:mppi_rollout} assigned nonzero MPPI weight after rejection based on \eqref{eq:dtcbf}. In practice, we only used feasible sets of actions as data to train the generative policy.
+\end{remark}
 
 We define the safety specification that is derived from a supporting hyperplane to the single obstacle. Let \(\mathbf{q}_{k+i \mid i}\in\mathbb R^d\) denote the robot position at state \(\mathbf{x}_{k+i \mid i}\) at discrete time step $k$ and horizon $i = 0, ..., N-1$. For a convex obstacle, let $\mathbf{p}$ be the point on its boundary closest to the current position $\mathbf{q}_{k\mid k}$, with outward normal $\mathbf{n}$. We define the barrier function as
 \begin{equation}
@@ -549,7 +558,7 @@ v(\mathbf{u}_{k:k+H-1\mid k)} =1
 
 \noindent Therefore, the nominal-polytope certificate induces a feasible face of the SOCP verifier.
 \subsection{Safe Flow Expansion}
-Generative policies constrain actions to the distribution of their demonstrations. Their behavior is usually limited to the dominant modes present in the demonstration data. This becomes problematic in OOD scenarios, where the model encounters states unseen during training. To address this distribution shift, recent large-scale imitation learning frameworks attempt to gather massive amounts of human intervention data to fill the coverage gaps (TODO: citation). However, this brute-force data-collection paradigm is inherently unscalable for capturing all possible safety-critical actions. To this end, we can utilize the self-generation of the generative policies that can query safe actions, and one can \textit{expand} the region likely to be sampled from a pre-trained generative model~ \cite{de2026active}. 
+Generative policies constrain actions to the distribution of their demonstrations. Their behavior is usually limited to the dominant modes present in the demonstration data. This becomes problematic in OOD scenarios, where the model encounters states unseen during training. To address this distribution shift, recent large-scale imitation learning frameworks attempt to gather massive amounts of human intervention data to fill the coverage gaps. However, data collection is inherently unscalable for capturing all possible safety-critical actions. To this end, we can utilize the self-generation of the generative policies that can query safe actions, and one can \textit{expand} the region likely to be sampled from a pre-trained generative model~ \cite{de2026active}. 
 
 Concretely, for a given context $(\mathbf o,\gamma)$, the pre-trained policy $p_1^{\theta_{\mathrm{0}}}(\cdot\mid\mathbf
 o,\gamma)$  samples only its \emph{generable set}:
@@ -567,12 +576,43 @@ denote the \emph{valid action set} certified by the verifier polytope of~\eqref{
 
 % Here we introduce our flow expansion mechanism, contingent to \cite{de2026active}. For the sake of simplicity, we refer to the sample as $H$ steps of predicted actions ($\mathbf{\hat u}_{k:k+H-1}$). We self-generate the action prediction at each time step and execute predicted actions. This yields trajectory generation, and for those that complete the task (\textit{i.e.,} reach the goal while maintained safe) each action prediction assigned a binary function value of $v(\mathbf{\hat u}_{k:k+H-1})$ viz \eqref{eq:verifier}. 
 
-To self-generate the sample to be informative about the multi-step safety while staying near the current policy ${\theta_t}$, at the round $t$: 
+To self-generate the sample to be informative about the multi-step safety while staying near the current policy ${\theta_t}$, at the round $n$: 
 \begin{equation}
-\mathbf{\hat u}\sim\ p_1^{\theta_t}(\mathbf{\hat u})\,\exp\!\Big(\sigma_t\big(\phi_s(\mathbf{\hat u})\big)/\beta\Big)/Z,
+\mathbf{\hat u}\sim\ p_1^{\theta_n}(\mathbf{\hat u })\,\exp\!\Big(\sigma_n\big(\phi_s(\mathbf{\hat u})\big)/\beta\Big)/Z,
 \label{eq:importancesampling}
 \end{equation}
-where $Z$ is the normalization $\int p(\mathbf{\hat u})\exp\!\big(f(\mathbf{\hat u})/\beta\big)\,dx$, with $f(\mathbf{\hat u}):=\sigma_t(\phi_s(\mathbf{\hat u}))$, $p:=p_1^{\theta_t}$. Notably, $\phi_s(\mathbf{\hat u})$ is a noised flow representation, which is modeled as the penultimate hidden activation (the feature before the head of the target conditional flow matching vector field). 
+\noindent where $Z$ is the normalization $\int p(\mathbf{\hat u})\exp\!\big(f(\mathbf{\hat u})/\beta\big)\,dx$, with $f(\mathbf{\hat u}):=\sigma_t(\phi_s(\mathbf{\hat u}))$, $p:=p_1^{\theta_t}$. Notably, $\phi_s(\mathbf{\hat u})$ is a noised flow representation, which is modeled as the penultimate hidden activation (the feature before the head of the target conditional flow matching vector field). For a fixed replanning context, let
+\begin{equation}
+    \xi_k := (\mathbf{o}_k,\gamma_k).
+    \label{eq:replanning-context}
+\end{equation}
+At expansion round \(n\), the conditional flow induces the
+\(\tau\)-generable action set
+\begin{equation}
+    \Omega_{\theta_n}^{\tau}(\xi)
+    :=
+    \left\{
+    \hat{\mathbf u}\in\mathcal U^H:
+    p_1^{\theta_n}(\hat{\mathbf u}\mid\xi)\ge\tau
+    \right\}.
+    \label{eq:conditional-generable-set}
+\end{equation}
+The pre-trained generable set is recovered by setting \(n=0\).
+
+The safety-certified valid action set is
+\begin{equation}
+    \mathcal V(\xi)
+    \equiv
+    \Omega^\star(\xi)
+    :=
+    \left\{
+    \hat{\mathbf u}\in\mathcal U^H:
+    v(\hat{\mathbf u};\xi)=1
+    \right\}.
+    \label{eq:verifier-certified-set}
+\end{equation}
+By Proposition~\ref{prop: 3}, every MPPI-DCBF action window satisfying
+the nominal-polytope premises belongs to \(\mathcal V(\xi)\).
 
 \note{Here we state the main theorem about the validity; After safe flow expansion, what probabilistic guarantee does our SAFER generative model has? How can we relate that with MPPI-DCBF conservative but safe behavior?}
 
@@ -601,31 +641,28 @@ where $Z$ is the normalization $\int p(\mathbf{\hat u})\exp\!\big(f(\mathbf{\hat
 \label{alg:sfe}
 \small
 \begin{algorithmic}[0]
-\Require pretrained CFM ${\theta_0}$, safety verifier $v$, rounds $N$, rollouts $M$, execution cost $R$
+\Require pretrained CFM ${\theta_0}$, safety verifier $v_\gamma$, rounds $N$, rollout stage $M$, batch $K$, execution cost $R$
 
 \State $\mathcal D_0\gets\varnothing$, $\mathcal B_0\gets\varnothing$
 \For{$n=0,\ldots,N-1$}
     \State Update uncertainty $\sigma_n$ from $\mathcal B_n$;
-    $\mathcal D_{n+1}\gets\mathcal D_n$
-    \For{$m=1,\ldots,M-1$}
-        \State $\xi_k=(\mathbf o_k,\gamma)$
-        \State Draw $\hat{\mathbf u}^{(1:K)}
-        \sim p_1^{\theta_n}(\cdot\mid\xi_k)$
-        \State Draw $\mathcal J_k$ by~\eqref{eq:importancesampling}
+    \While{$\mathcal I_k^+$ non-empty}
+        \State Context $\xi_k=(\mathbf o_k,\gamma_k)$
+        \State Draw $\hat{\mathbf u}^{(1:K)} \sim p_1^{\theta_n}(\mathbf{\hat u}\mid \xi_k)\,\exp\!\Big(\sigma_n\big(\phi_s(\mathbf{\hat u})\big)/\beta\Big)/Z$
+        
         \State Query $y_j\gets
-        v(\xi_k,\hat{\mathbf u}^{(j)})$
-        for all $j\in\mathcal J_k$
-        \State $\mathcal D_{n+1} \gets (\xi_k,\hat{\mathbf u}^{(j)},y_j)$
+        v_\gamma(\xi_k,\hat{\mathbf u}^{(j)})$ 
+        $\forall j\in\{1,\cdots,K\}$ 
+
         \State $\mathcal I_k^+\gets
         \{j\in\mathcal J_k:y_j=1\}$
         \State $j^\star\gets
         \arg\max_{j\in\mathcal I_k^+}
         m(\xi_k,\hat{\mathbf u}^{(j)})$
         \State Execute $\hat{\mathbf u}^{(j^\star)}_{k\mid k}$ and replan
-    \EndFor
+    \EndWhile
     \State $\mathcal D_{n+1}^{+}\gets
-    \{(\xi,\hat{\mathbf u},1)\in\mathcal D_{n+1}\}$
-    \State $\mathcal D_{n+1}^{-}\gets
+    \{(\xi,\hat{\mathbf u},1)\in\mathcal D_{n+1}\}$, $\mathcal D_{n+1}^{-}\gets
     \{(\xi,\hat{\mathbf u},0)\in\mathcal D_{n+1}\}$
     \State $\mathcal B_{n+1}\gets
     \textsc{UpdateBuffer}(\mathcal B_n,\mathcal D_{n+1}^{+})$
