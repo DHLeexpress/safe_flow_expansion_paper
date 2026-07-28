@@ -746,7 +746,7 @@ where \([k_t(z)]_i=k(z_i,z)\), \([K_t]_{ij}=k(z_i,z_j)\),
 Let
 \(A\subseteq\mathcal Z_{\xi,\gamma}\) be compact and suppose
 \(k(z,z)\le1\) for all \(z\in A\). Assume
-\(g\in\mathcal H_k\) and \(\|g\|_k\le B\). For \(0<\delta<1\), define 
+\(g\in\mathcal H_k\) and \(\|g\|_k\le B\). For \(0<\delta<1\), define the interval and information gain: 
 \begin{align}
     \beta_t^A(\delta)
     &:=
@@ -769,7 +769,7 @@ Let
 where \(L_s:=\sup_{|a|\le B}\dot{s}(a)\). Then 
 \begin{equation}
     \begin{aligned}
-        \Pr\bigl(
+        \Pr\bigl(\forall t\ge1,\ \forall z\in A:
         \left|s(\mu_t(z))-s(g(z))\right|
         &\le\beta_t^A(\delta)\sigma_t(z)
         \bigr)
@@ -778,7 +778,7 @@ where \(L_s:=\sup_{|a|\le B}\dot{s}(a)\). Then
     \label{eq:anytime-logistic-confidence}
 \end{equation}
 \end{theorem}
-holds $\forall t\ge1,\ \forall z\in A$. Thus a single event of probability at least \(1-\delta\) controls all
+Thus a single event of probability at least \(1-\delta\) controls all
 query rounds and representation points. In particular, the lower
 confidence bound
 \(
