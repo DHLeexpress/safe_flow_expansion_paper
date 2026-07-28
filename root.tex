@@ -643,7 +643,6 @@ p_1^{\theta_n}(\mathbf u\mid\xi,\gamma)
 \right)
 d\mathbf u .
 \end{equation}
-\note{Here we state the main theorem about the validity; After safe flow expansion, what probabilistic guarantee does our SAFER generative model has? How can we relate that with MPPI-DCBF conservative but safe behavior?}
 
 % \begin{algorithm}[H]
 % \caption{Safe Flow Expansion}
@@ -701,8 +700,10 @@ d\mathbf u .
 \State \Return $p_1^{\theta_{\hat n}}$
 \end{algorithmic}
 \end{algorithm}
-
+\noindent \textbf{Algorithm details} Algorithm~\ref{alg:sfe} implements data acquisition on verified actions under the evolving CFM policy. At each receding-horizon step, the current policy proposes uncertainty-tilted actions, and among those, the verifier \(v_{\gamma_k}\) is used to acquire safe actions. The data is collected in a receding-horizon manner, provided that \(\xi_k\) is a sufficient statistic for the system dynamics (\textit{i.e.,} input of the generative policy), this receding-horizon interaction induces a Markovian closed-loop sampling process. During the data acquisition, one can execute (the execution cost \(C\)) expert actions \cite{ross2011reduction} or restrict execution to a safe admissible action set \cite{alshiekh2018safe}. In our case, verifier validity remains enforced by restricting selection to \(\mathcal I_k^+\) and constructing this execution cost for efficient safe coverage remains an open question.
 \noindent \textbf{Baseline method}
+
+
 We adapt CFM-MPPI~\cite{mizuta2025unified}, which combines reward-guided
 flow generation with sampling-based MPPI refinement. Given a base pre-trained vector field $\mathbf{v}^{\theta_{\text{0}}}(\mathbf{x}\!\mid\! \mathbf{o},\gamma)$, the guided velocity field is the local gradient ascent of the combined reward:
 \begin{equation}
