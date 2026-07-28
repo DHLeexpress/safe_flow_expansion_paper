@@ -360,7 +360,6 @@ A valid control barrier function on $\mathcal{U}=\mathbb{R}^{d_u}$ is usually as
 
 For these reasons, our planner relies on the weaker but more practical condition of pointwise feasibility without harming the optimality condition. Rather than proving recursive feasibility, our approach ensures safety by enforcing DCBF constraints at each time step. This also motivates our next goal to develop a safe flow expansion mechanism, where the data is scarce in OOD. We rather self-generate the safe behavior and enforce more relaxed DCBF constraints. Rather than relying purely on online computation, we view the proposed safe flow expansion as a mechanism for \textit{distilling} this safe behavior into a generative policy. Having established the problem statement, we direct our attention to an example to answer the question: \textit{How can we train a generative model that also exhibits this safe behavior in out-of-distribution (OOD) scenarios?}
 
-\note{Explain the robot dynamics (DI)}
 % We consider a robot whose dynamics are described by the discrete-time control affine system in \eqref{eq:affinesystem}, evolving in a cluttered environment with static obstacles. This work has two primary objectives. First, we experimentally demonstrate that our proposed controller, MPPI-DCBF, achieves superior safety guarantees over a standard baseline MPPI with different choices of the safety parameter $\gamma$. We validate this approach and its scalability on both LTI systems and complex nonlinear models, such as a quadrotor. Second, we address the challenge of creating a real-time generative policy that can modulate the trade-off between safety and feasibility by continuously scheduling $\gamma$, based on observations.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Method}
@@ -560,60 +559,90 @@ v(\mathbf{u}_{k:k+H-1\mid k)} =1
 \subsection{Safe Flow Expansion}
 Generative policies constrain actions to the distribution of their demonstrations. Their behavior is usually limited to the dominant modes present in the demonstration data. This becomes problematic in OOD scenarios, where the model encounters states unseen during training. To address this distribution shift, recent large-scale imitation learning frameworks attempt to gather massive amounts of human intervention data to fill the coverage gaps. However, data collection is inherently unscalable for capturing all possible safety-critical actions. To this end, we can utilize the self-generation of the generative policies that can query safe actions, and one can \textit{expand} the region likely to be sampled from a pre-trained generative model~ \cite{de2026active}. 
 
-Concretely, for a given context $(\mathbf o,\gamma)$, the pre-trained policy $p_1^{\theta_{\mathrm{0}}}(\cdot\mid\mathbf
-o,\gamma)$  samples only its \emph{generable set}:
+Concretely, for a given state-observation context \(\xi\) and safety parameter \(\gamma\), the policy at expansion round \(n\) induces the \(\tau\)-generable set
 \begin{equation}
-\Omega^{\tau}_{\theta_{\mathrm{0}}}
-(\mathbf o,\gamma)=\{\hat{\mathbf u}: p_1^{\theta_{\mathrm{0}}}(\hat{\mathbf u}\mid\mathbf
-o,\gamma)\ge\tau\},
-\end{equation}
-which is the region likely to be sampled and preferably draws from dominant modes. Here, we abbreviate and refer to the sample as $H$ steps of predicted actions $\mathbf{\hat u}_{k:k+H-1}$ as $\mathbf{\hat u}$. 
-
-Let $\Omega^{*}(\mathbf o,\gamma)=\{\hat{\mathbf u}: v(\hat{\mathbf u};\mathbf o,\gamma)=1\}$
-denote the \emph{valid action set} certified by the verifier polytope of~\eqref{eq:socp}. Since the planner explores few dominant modes due to \textit{local infeasibility}, it is followed that $\mathrm{Vol}(\Omega^{\tau}_{\theta_0})
-\ll\mathrm{Vol}(\Omega^{*})$. Valid samples will lie in the valid out-of-distribution region $\Omega^{*}\setminus\Omega^{\tau}_
-{\theta_{0}}$. 
-
-% Here we introduce our flow expansion mechanism, contingent to \cite{de2026active}. For the sake of simplicity, we refer to the sample as $H$ steps of predicted actions ($\mathbf{\hat u}_{k:k+H-1}$). We self-generate the action prediction at each time step and execute predicted actions. This yields trajectory generation, and for those that complete the task (\textit{i.e.,} reach the goal while maintained safe) each action prediction assigned a binary function value of $v(\mathbf{\hat u}_{k:k+H-1})$ viz \eqref{eq:verifier}. 
-
-To self-generate the sample to be informative about the multi-step safety while staying near the current policy ${\theta_t}$, at the round $n$: 
-\begin{equation}
-\mathbf{\hat u}\sim\ p_1^{\theta_n}(\mathbf{\hat u })\,\exp\!\Big(\sigma_n\big(\phi_s(\mathbf{\hat u})\big)/\beta\Big)/Z,
-\label{eq:importancesampling}
-\end{equation}
-\noindent where $Z$ is the normalization $\int p(\mathbf{\hat u})\exp\!\big(f(\mathbf{\hat u})/\beta\big)\,dx$, with $f(\mathbf{\hat u}):=\sigma_t(\phi_s(\mathbf{\hat u}))$, $p:=p_1^{\theta_t}$. Notably, $\phi_s(\mathbf{\hat u})$ is a noised flow representation, which is modeled as the penultimate hidden activation (the feature before the head of the target conditional flow matching vector field). For a fixed replanning context, let
-\begin{equation}
-    \xi_k := (\mathbf{o}_k,\gamma_k).
-    \label{eq:replanning-context}
-\end{equation}
-At expansion round \(n\), the conditional flow induces the
-\(\tau\)-generable action set
-\begin{equation}
-    \Omega_{\theta_n}^{\tau}(\xi)
+    \Omega_{\theta_n}^{\tau}(\xi,\gamma)
     :=
     \left\{
     \hat{\mathbf u}\in\mathcal U^H:
-    p_1^{\theta_n}(\hat{\mathbf u}\mid\xi)\ge\tau
+    p_1^{\theta_n}(\hat{\mathbf u}\mid\xi,\gamma)\ge\tau
     \right\}.
     \label{eq:conditional-generable-set}
 \end{equation}
-The pre-trained generable set is recovered by setting \(n=0\).
-
-The safety-certified valid action set is
+The pre-trained generable set is recovered by setting \(n=0\). Here,
+we abbreviate the \(H\) steps of predicted actions
+\(\hat{\mathbf u}_{k:k+H-1}\) as \(\hat{\mathbf u}\). Let
 \begin{equation}
-    \mathcal V(\xi)
+    \mathcal V_\gamma(\xi)
     \equiv
-    \Omega^\star(\xi)
+    \Omega^\star(\xi,\gamma)
     :=
     \left\{
     \hat{\mathbf u}\in\mathcal U^H:
-    v(\hat{\mathbf u};\xi)=1
-    \right\}.
+    v_\gamma(\hat{\mathbf u};\xi)=1
+    \right\}
     \label{eq:verifier-certified-set}
 \end{equation}
-By Proposition~\ref{prop: 3}, every MPPI-DCBF action window satisfying
-the nominal-polytope premises belongs to \(\mathcal V(\xi)\).
+denote the valid action set certified by the verifier polytope
+of~\eqref{eq:socp}. By Proposition~\ref{prop: 3}, every MPPI-DCBF receding horizon belongs to \(\mathcal V_\gamma(\xi)\). When the pre-trained policy represents only a few dominant modes, its
+generable set may cover only a small portion of the certified set,
+\begin{equation}
+    \operatorname{Vol}\!\left(
+    \Omega_{\theta_0}^{\tau}(\xi,\gamma)
+    \right)
+    \ll
+    \operatorname{Vol}\!\left(\mathcal V_\gamma(\xi)\right).
+\end{equation}
+The valid OOD region targeted by expansion is therefore
+\[
+    \mathcal V_\gamma(\xi)
+    \setminus
+    \Omega_{\theta_0}^{\tau}(\xi,\gamma).
+\]
 
+% Concretely, for a given context $(\mathbf o,\gamma)$, the pre-trained policy $p_1^{\theta_{\mathrm{0}}}(\cdot\mid\mathbf
+% o,\gamma)$  samples only its \emph{generable set}:
+% \begin{equation}
+% \Omega^{\tau}_{\theta_{\mathrm{0}}}
+% (\mathbf o,\gamma)=\{\hat{\mathbf u}: p_1^{\theta_{\mathrm{0}}}(\hat{\mathbf u}\mid\mathbf
+% o,\gamma)\ge\tau\},
+% \end{equation}
+% which is the region likely to be sampled and preferably draws from dominant modes. Here, we abbreviate and refer to the sample as $H$ steps of predicted actions $\mathbf{\hat u}_{k:k+H-1}$ as $\mathbf{\hat u}$. 
+
+% Let $\Omega^{*}(\mathbf o,\gamma)=\{\hat{\mathbf u}: v(\hat{\mathbf u};\mathbf o,\gamma)=1\}$
+% denote the \emph{valid action set} certified by the verifier polytope of~\eqref{eq:socp}. Since the planner explores few dominant modes due to \textit{local infeasibility}, it is followed that $\mathrm{Vol}(\Omega^{\tau}_{\theta_0})
+% \ll\mathrm{Vol}(\Omega^{*})$. Valid samples will lie in the valid out-of-distribution region $\Omega^{*}\setminus\Omega^{\tau}_
+% {\theta_{0}}$. 
+
+% % Here we introduce our flow expansion mechanism, contingent to \cite{de2026active}. For the sake of simplicity, we refer to the sample as $H$ steps of predicted actions ($\mathbf{\hat u}_{k:k+H-1}$). We self-generate the action prediction at each time step and execute predicted actions. This yields trajectory generation, and for those that complete the task (\textit{i.e.,} reach the goal while maintained safe) each action prediction assigned a binary function value of $v(\mathbf{\hat u}_{k:k+H-1})$ viz \eqref{eq:verifier}. 
+
+To self-generate samples informative about multi-step safety while
+staying near the current policy \(\theta_n\), at expansion round \(n\),
+we sample
+\begin{equation}
+\hat{\mathbf u}
+\sim
+\frac{
+p_1^{\theta_n}(\hat{\mathbf u}\mid\xi,\gamma)
+\exp\!\left(
+\sigma_n\!\left(\phi_s(\hat{\mathbf u};\xi,\gamma)\right)/\beta
+\right)
+}{
+Z_n(\xi,\gamma)
+},
+\label{eq:importancesampling}
+\end{equation}
+where
+\begin{equation}
+Z_n(\xi,\gamma)
+=
+\int_{\mathcal U^H}
+p_1^{\theta_n}(\mathbf u\mid\xi,\gamma)
+\exp\!\left(
+\sigma_n\!\left(\phi_s(\mathbf u;\xi,\gamma)\right)/\beta
+\right)
+d\mathbf u .
+\end{equation}
 \note{Here we state the main theorem about the validity; After safe flow expansion, what probabilistic guarantee does our SAFER generative model has? How can we relate that with MPPI-DCBF conservative but safe behavior?}
 
 % \begin{algorithm}[H]
@@ -635,18 +664,17 @@ the nominal-polytope premises belongs to \(\mathcal V(\xi)\).
 % }
 % \end{algorithm}
 
-
 \begin{algorithm}[t]
 \caption{Safe Flow Expansion}
 \label{alg:sfe}
 \small
 \begin{algorithmic}[0]
-\Require pretrained CFM ${\theta_0}$, safety verifier $v_\gamma$, rounds $N$, rollout stage $M$, batch $K$, execution cost $R$
+\Require pretrained CFM ${\theta_0}$, safety verifier $v_\gamma$, rounds $N$, rollout stage $M$, batch $K$, execution cost $C$
 
 \State $\mathcal D_0\gets\varnothing$, $\mathcal B_0\gets\varnothing$
 \For{$n=0,\ldots,N-1$}
     \State Update uncertainty $\sigma_n$ from $\mathcal B_n$;
-    \While{$\mathcal I_k^+$ non-empty}
+    \While{$\mathcal I_k^+ \neq \varnothing$}
         \State Context $\xi_k=(\mathbf o_k,\gamma_k)$
         \State Draw $\hat{\mathbf u}^{(1:K)} \sim p_1^{\theta_n}(\mathbf{\hat u}\mid \xi_k)\,\exp\!\Big(\sigma_n\big(\phi_s(\mathbf{\hat u})\big)/\beta\Big)/Z$
         
@@ -654,12 +682,12 @@ the nominal-polytope premises belongs to \(\mathcal V(\xi)\).
         v_\gamma(\xi_k,\hat{\mathbf u}^{(j)})$ 
         $\forall j\in\{1,\cdots,K\}$ 
 
-        \State $\mathcal I_k^+\gets
+        \State $\mathcal J_k^+\gets
         \{j\in\mathcal J_k:y_j=1\}$
         \State $j^\star\gets
         \arg\max_{j\in\mathcal I_k^+}
-        m(\xi_k,\hat{\mathbf u}^{(j)})$
-        \State Execute $\hat{\mathbf u}^{(j^\star)}_{k\mid k}$ and replan
+        C(\xi_k,\hat{\mathbf u}^{(j)})$
+        \State Execute $\hat{\mathbf u}^{(j^\star)}_{k\mid k}$ and replan $k\gets k+1$
     \EndWhile
     \State $\mathcal D_{n+1}^{+}\gets
     \{(\xi,\hat{\mathbf u},1)\in\mathcal D_{n+1}\}$, $\mathcal D_{n+1}^{-}\gets
@@ -713,9 +741,9 @@ Since the generative model learns a continuous mapping, it can interpolate betwe
 
 \section{Experiments and Discussion}
 \note{Structure for each subsection: 1. Define data used for training, In-distribution and OOD, 2. Safe Flow Expansion, how we subsequently gather positive samples (execution strategy) }
-For simulation, we evaluate our framework on 2-D goal-reaching task on cluttered environments and a dynamic pedestrian simulator \cite{helbing1995social}. We used 2D double integrator dynamics for robot policy generation. The base CFM model uses a vanilla flow-matching velocity network of a single MLP with 3 hidden layers, conditioned on the input of (i) a 5-dimensional state (the relative goal position, the velocity, and the safety parameter $\gamma$), (ii) a 32-dim obstacle embedding that encodes a nominal polytope barrier function in discretized grids, and output predicted action sequences. The 32-dim penultimate representation at the flow time $s$ = 0.9 gives the flow representation for the uncertainty estimation. 
+For simulation, we evaluate our framework on 2D goal-reaching task in cluttered environments and a dynamic pedestrian simulator \cite{helbing1995social}. We used 2D double integrator dynamics for robot policy generation. The base CFM model uses a vanilla flow-matching velocity network of a single MLP with 3 hidden layers, conditioned on the input of (i) a 5-dimensional state (the relative goal position, the velocity, and the safety parameter $\gamma$), (ii) a 32-dim obstacle embedding that encodes a nominal polytope barrier function in discretized grids, and output predicted action sequences. The 32-dim penultimate representation at the flow time $s$ = 0.9 gives the flow representation for the uncertainty estimation. 
 
-For hardware experiments, we extend our method into a 3D path planning problem. We used 3D double integrator dynamics for robot trajectory generation. The CFM is similarly structured but uses only a 10-dimensional state (the relative goal position, the velocity, and the safety parameter $\gamma$), and output predicted action sequences.
+For hardware experiments, we extend our method into a 3D path planning problem. We used 3D double integrator dynamics for robot trajectory generation and evaluate using \textit{Crazyflie} quadrotor drone. We use an \textit{Vicon} motion capture system to provide the real-time position. The desired position provided by the expanded model is tracked at a rate of 50Hz. The CFM is similarly structured but uses only a 10-dimensional state (the relative goal position, the velocity, and the safety parameter $\gamma$), and output predicted action sequences.
 
 %, employing Adam with learning rate $1 \times 10^{-4}$, batch 64, and 4 inner steps. 
 \subsection{2D Cluttered Environment: Simulation}
@@ -732,7 +760,6 @@ See Fig.~\ref{fig:2d_sfm}
 % %The policy is trained with the encoder frozen, employing AdamW with learning rate $2 \times 10^{-5}$, batch 64, and 4 inner steps.
 % Evaluation is done over 40 rollouts per $\gamma$, reporting success/collision rate, minimum clearance, and time-to-goal on successful rollouts.
 \subsection{3D Quadrotor: Hardware}
-Finally, we deploy our framework on a \textit{Crazyflie} quadrotor drone. We use an \textit{Vicon} motion capture system to provide the real-time position. The desired position provided by expanded model is tracked by Crazyflie controller at 1kHz (?).
 
 
 \section{Conclusion}
