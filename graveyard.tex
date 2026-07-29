@@ -1,3 +1,49 @@
+% %%%%%%%%%%%%%%%%Start_of_Algorithm1-%%%%%%%%%%%%%%%%
+% \begin{algorithm}[H]
+% \caption{MPPI-DCBF Algorithm}\label{alg:safe-mppi}
+% \SetKwInOut{Input}{Input}
+% \SetKwInOut{Output}{Output}
+% \Input{
+
+% Initial state $x_{k\mid k}$, horizon $N$, samples $M$, warm-start $\bar u_{k+i\mid k}$, inverse temperature $\lambda$, noise variance $\Sigma$, rollout cost in~\eqref{eq:mppicost}, safety parameter $\gamma\!\in\!(0,1]$, system model $f(x,u)$
+% }
+% \Output{Optimal control policy $u^*_{k\mid k}$}
+
+% \Repeat{control $u^*_{k\mid k}$ applied}{
+%   \For{$m=1$ \KwTo $M$}{
+%     \For{$i=0$ \KwTo $N-1$}{
+%       sample $\varepsilon^{(m)}_{k+i}\!\sim\!\mathcal{N}(0,\Sigma)$\;
+      
+%       set $u^{(m)}_{k+i\mid k}=\bar u_{k+i\mid k}+\varepsilon^{(m)}_{k+i}$\;
+      
+%       % \tcp*[h]{$\triangleright$ MPPI sampling}
+      
+%       rollout $x^{(m)}_{k+i+1\mid k}=f\!\bigl(x^{(m)}_{k+i\mid k},u^{(m)}_{k+i\mid k}\bigr)$\;
+      
+%       \If{$\exists\, i:\, h^{\mathrm{aff}}\!\bigl(x^{(m)}_{k+i\mid k};x_{k\mid k}\bigr)<(1-\gamma)^i$}{
+%         \textbf{reject} rollout $m$;\; $S^{(m)} \leftarrow \infty$\;
+        
+%         \tcp*[h]{$\triangleright$ safety specification~\eqref{eq:safetyspecification}}
+%       }
+%     } % end inner For (i)
+%   } % end For (m)
+%   {
+%     among safe samples, evaluate $S^{(m)}$ using~\eqref{eq:mppicost}
+        
+%     $\hat\omega_m=\exp\!\big(-[S^{(m)}-\min_j S^{(j)}]/\lambda\big)$\;
+
+%     $\Delta u_{k+i\mid k} = (\sum_{m=1}^{M}\hat\omega_m\,\varepsilon^{(m)}_{k+i}) / (\sum_{m=1}^{M}\hat\omega_m)$
+    
+%     % \tcp*[h]{$\triangleright$ Weight for rollout}
+
+%     $\bar u_{k+i\mid k}\leftarrow \bar u_{k+i\mid k}+\Delta u_{k+i\mid k}$\;
+%   }
+  
+%   $u^*_{k\mid k}=\bar u_{k\mid k}$;\; shift sequence
+% } % end Repeat
+% \end{algorithm}
+% %%%%%%%%%%%%%%%%End_of_Algorithm1-%%%%%%%%%%%%%%%%
+
 % %%%%%%%%%%%%%%%%Start_of_Algorithm2-%%%%%%%%%%%%%%%%
 % \begin{algorithm}[H]
 % \caption{Conditional Flow Matching for Safety-tunable Policy Generation}\label{alg:cfm}
