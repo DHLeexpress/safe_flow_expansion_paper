@@ -573,8 +573,6 @@ The pre-trained generable set is recovered by setting \(n=0\). Here,
 we abbreviate the \(H\) steps of predicted actions
 \(\hat{\mathbf u}_{k:k+H-1}\) as \(\hat{\mathbf u}\). Let
 \begin{equation}
-    \mathcal V_\gamma(\xi)
-    \equiv
     \Omega^\star(\xi,\gamma)
     :=
     \left\{
@@ -584,18 +582,18 @@ we abbreviate the \(H\) steps of predicted actions
     \label{eq:verifier-certified-set}
 \end{equation}
 denote the valid action set certified by the verifier polytope
-of~\eqref{eq:socp}. By Proposition~\ref{prop: 3}, every MPPI-DCBF receding horizon belongs to \(\mathcal V_\gamma(\xi)\). When the pre-trained policy represents only a few dominant modes, its
+of~\eqref{eq:socp}. By Proposition~\ref{prop: 3}, every MPPI-DCBF receding horizon belongs to \(\Omega^\star(\xi,\gamma)\). When the pre-trained policy represents only a few dominant modes, its
 generable set may cover only a small portion of the certified set,
 \begin{equation}
     \operatorname{Vol}\!\left(
     \Omega_{\theta_0}^{\tau}(\xi,\gamma)
     \right)
     \ll
-    \operatorname{Vol}\!\left(\mathcal V_\gamma(\xi)\right).
+    \operatorname{Vol}\!\left(\Omega^\star(\xi,\gamma)\right).
 \end{equation}
 The valid OOD region targeted by expansion is therefore
 \[
-    \mathcal V_\gamma(\xi)
+    \Omega^\star(\xi,\gamma)
     \setminus
     \Omega_{\theta_0}^{\tau}(\xi,\gamma).
 \]
@@ -701,8 +699,7 @@ d\mathbf u .
 \end{algorithm}
 \noindent \textbf{Algorithm details} Algorithm~\ref{alg:sfe} implements data acquisition on verified actions under the evolving CFM policy. At each receding-horizon step, the current policy proposes uncertainty-tilted actions, and among those, the verifier \(v_{\gamma_k}\) is used to acquire safe actions. The data is collected in a receding-horizon manner, provided that \(\xi_k\) is a sufficient statistic for the system dynamics (\textit{i.e.,} input of the generative policy), this receding-horizon interaction induces a Markovian closed-loop sampling process. During the data acquisition, one can execute (the execution cost \(C\)) expert actions \cite{ross2011reduction} or restrict execution to a safe admissible action set \cite{alshiekh2018safe}. In our case, verifier validity remains enforced by restricting selection to \(\mathcal I_k^+\) and constructing this execution cost for efficient safe coverage remains an open question.
 
-\noindent \textbf{Reachability analysis.}
-Fix \((\xi,\gamma)\), then the noised flow representation induces the conditional representation space
+\noindent \textbf{Reachability analysis.} Here we use the bandits with preference feedback theory to provide confidence intervals for verifier uncertainty. Fix the context and safety pair \((\xi,\gamma)\), then the noised flow representation induces the conditional representation space
 \begin{equation}
     \begin{aligned}
         \phi_s(\cdot;\xi,\gamma)&:\mathcal U^H\rightarrow
@@ -716,17 +713,21 @@ Fix \((\xi,\gamma)\), then the noised flow representation induces the conditiona
     \end{aligned}
     \label{eq:conditional-representation-space}
 \end{equation}
-For \(z=\phi_s(\hat{\mathbf u};\xi,\gamma)\), the binary verifier feedback can be modeled as 
+For \(z=\phi_s(\hat{\mathbf u};\xi,\gamma)\), the binary verifier feedback can be modeled as the composition of sigmoid function and unknown validity function on the representation space
 \begin{equation}
-    \Pr(y=1\mid z)=s(g(z)),
-    \qquad
+    \Pr(y=1\mid z)=s(g(z)), \quad
     s(a):=(1+\exp(-a))^{-1},
     \label{eq:logistic-verifier-model}
 \end{equation}
-where \(g\in\mathcal H_k\) is an unknown function in the Reproducing Kernel Hilbert Space (RKHS) associated
-with kernel \(k\), with \(\|g\|_k\le B\). Let \(\mu_t\) denote the
+where $h>0$ is a threshold, \(g\in\mathcal H_k\) is an unknown function in the Reproducing Kernel Hilbert Space (RKHS) associated
+with kernel \(k\), with \(\|g\|_k\le B\). Then the valid representation set is 
+\begin{equation}
+\Omega_* := \{z\in Z : s(g(z)) \ge h\}.
+\label{eq:prob_valid_set}
+\end{equation}
+Let \(\mu_t\) denote the
 regularized kernel logistic estimator obtained from \(t\) verified
-queries \(\{(z_i,y_i)\}_{i=1}^t\). Its uncertainty score is
+queries \(\{(z_i,y_i)\}_{i=1}^t\) (See Prop.1~\cite{pasztor2024bandits}). Its uncertainty score is
 \begin{equation}
     \sigma_t^2(z)
     :=
@@ -741,7 +742,7 @@ where \([k_t(z)]_i=k(z_i,z)\), \([K_t]_{ij}=k(z_i,z_j)\),
 \(\lambda>0\), and
 \(\kappa:=\sup_{|a|\le B}1/\dot{s}(a)\).
 
-\begin{theorem}[Thm.2~\cite{pasztor2024bandits}]
+\begin{lemma}[Thm.2~\cite{pasztor2024bandits}]
 \label{thm:kernelized-logistic-confidence}
 Let
 \(A\subseteq\mathcal Z_{\xi,\gamma}\) be compact and suppose
@@ -777,14 +778,61 @@ where \(L_s:=\sup_{|a|\le B}\dot{s}(a)\). Then
     \end{aligned}
     \label{eq:anytime-logistic-confidence}
 \end{equation}
-\end{theorem}
+\end{lemma}
 Thus a single event of probability at least \(1-\delta\) controls all
-query rounds and representation points. In particular, the lower
+query rounds at time $t$ and representation features $z$. In particular, the lower
 confidence bound
 \(
 s(\mu_t(z))-\beta_t^A(\delta)\sigma_t(z)
 \)
-is used below to expand the verifier-certified set.
+is used below to expand the verifier-certified set. For a fixed context--safety pair \((\xi,\gamma)\), binary feedback in the original action space $\mathcal U^H$ is now abbreviated as \( \rho_\gamma(\hat{\mathbf u})=s\!\left(g(\phi_s(\hat{\mathbf u};\xi,\gamma))\right)\)~\footnote{The canonical kernel metric is used $d_k(z,z')
+:=
+\left\|
+k(z,\cdot)-k(z',\cdot)
+\right\|_{\mathcal H_k}$}.
+We want to pullback to our original action space, define
+\begin{equation}
+d_{\phi,k}^{\xi,\gamma}
+(\hat{\mathbf u},\hat{\mathbf u}')
+:=
+d_k\!\left(
+\phi_s(\hat{\mathbf u};\xi,\gamma), 
+\phi_s(\hat{\mathbf u}';\xi,\gamma)
+\right).
+\label{eq:pullback-kernel-metric}
+\end{equation}
+By the reproducing property in RKHS, under the assumption that $\phi_s$ is $L_s$--Lipschitz,
+\begin{equation}
+\left|
+\rho_\gamma(\hat{\mathbf u})
+-\rho_\gamma(\hat{\mathbf u}')
+\right|
+\le
+L_sB\,
+d_{\phi,k}^{\xi,\gamma}
+(\hat{\mathbf u},\hat{\mathbf u}').
+\label{eq:rkhs-spatial-bound}
+\end{equation}
+
+We can now define the verifier-certified set from its representation surrogate~\eqref{eq:logistic-verifier-model}
+\begin{equation}
+\mathcal V_{\gamma}(\xi)
+:=
+\left\{
+\hat{\mathbf u}\in\mathcal U^H:
+\rho_\gamma(\hat{\mathbf u})\ge h
+\right\}.
+\label{eq:representation-valid-certified-set}
+\end{equation}
+The certified generable set is
+\begin{equation}
+\mathcal G_{\theta_t}^{\tau}(\xi,\gamma)
+:=
+\Omega_{\theta_t}^{\tau}(\xi,\gamma)
+\cap
+\mathcal V_\gamma(\xi).
+\label{eq:certified-generable-set}
+\end{equation}
 
 
 \noindent \textbf{Baseline method} We adapt CFM-MPPI~\cite{mizuta2025unified}, which combines reward-guided flow generation with sampling-based MPPI refinement. Given a base pre-trained vector field $\mathbf{v}^{\theta_{\text{0}}}(\mathbf{x}\!\mid\! \mathbf{o},\gamma)$, the guided velocity field is the local gradient ascent of the combined reward:
