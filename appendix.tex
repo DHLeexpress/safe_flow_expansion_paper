@@ -1,0 +1,188 @@
+\section{Appendix}\label{sec:appendix}
+Here we use the bandits with preference feedback theory to provide confidence intervals for verifier uncertainty. Fix the context and safety pair \((\xi,\gamma)\), then the noised flow representation induces the conditional representation space
+\begin{equation}
+    \begin{aligned}
+        \phi_s(\cdot;\xi,\gamma)&:\mathcal U^H\rightarrow
+        \mathcal Z_{\xi,\gamma},\\
+        \mathcal Z_{\xi,\gamma}
+        &:=
+        \left\{
+        \phi_s(\hat{\mathbf u};\xi,\gamma):
+        \hat{\mathbf u}\in\mathcal U^H
+        \right\}.
+    \end{aligned}
+    \label{eq:conditional-representation-space}
+\end{equation}
+For \(z=\phi_s(\hat{\mathbf u};\xi,\gamma)\), the binary verifier feedback can be modeled as the composition of sigmoid function and unknown validity function on the representation space
+\begin{equation}
+    \Pr(y=1\mid z)=s(g(z)), \quad
+    s(a):=(1+\exp(-a))^{-1},
+    \label{eq:logistic-verifier-model}
+\end{equation}
+where $h>0$ is a threshold, \(g\in\mathcal H_k\) is an unknown function in the Reproducing Kernel Hilbert Space (RKHS) associated
+with kernel \(k\), with \(\|g\|_k\le B\). Then the valid representation set is 
+\begin{equation}
+\Omega_* := \{z\in Z : s(g(z)) \ge h\}.
+\label{eq:prob_valid_set}
+\end{equation}
+Let \(\mu_t\) denote the
+regularized kernel logistic estimator obtained from \(t\) verified
+queries \(\{(z_i,y_i)\}_{i=1}^t\) (See Prop.1~\cite{pasztor2024bandits}). Its uncertainty score is
+\begin{equation}
+    \sigma_t^2(z)
+    :=
+    k(z,z)
+    -
+    k_t(z)^\top
+    \left(K_t+\lambda\kappa I_t\right)^{-1}
+    k_t(z),
+    \label{eq:kernel-logistic-uncertainty}
+\end{equation}
+where \([k_t(z)]_i=k(z_i,z)\), \([K_t]_{ij}=k(z_i,z_j)\),
+\(\lambda>0\), and
+\(\kappa:=\sup_{|a|\le B}1/\dot{s}(a)\).
+\begin{lemma}[Thm.2~\cite{pasztor2024bandits}]
+\label{thm:kernelized-logistic-confidence}
+Let
+\(A\subseteq\mathcal Z_{\xi,\gamma}\) be compact and suppose
+\(k(z,z)\le1\) for all \(z\in A\). Assume
+\(g\in\mathcal H_k\) and \(\|g\|_k\le B\). For \(0<\delta<1\), define the interval and information gain: 
+\begin{align}
+    \beta_t^A(\delta)
+    &:=
+    4L_sB+
+    2L_s
+    \sqrt{
+    \frac{2\kappa}{\lambda}
+    \left(\mathcal I_t^A+\log(1/\delta)\right)
+    },
+    \label{eq:logistic-confidence-radius}\\
+    \mathcal I_t^A
+    &:=
+    \max_{z_1,\ldots,z_t\in A}
+    \frac{1}{2}
+    \log\det\left(
+    I_t+(\lambda\kappa)^{-1}K_t
+    \right),
+    \label{eq:maximum-information-gain}
+\end{align}
+where \(L_s:=\sup_{|a|\le B}\dot{s}(a)\). Then 
+\begin{equation}
+    \begin{aligned}
+        \Pr\bigl(\forall t\ge1,\ \forall z\in A:\\
+        \left|s(\mu_t(z))-s(g(z))\right|
+        &\le\beta_t^A(\delta)\sigma_t(z)
+        \bigr)
+        \ge1-\delta.
+    \end{aligned}
+    \label{eq:anytime-logistic-confidence}
+\end{equation}
+\end{lemma}
+Thus a single event of probability at least \(1-\delta\) controls all
+query rounds at time $t$ and representation features $z$. In particular, the lower
+confidence bound
+\(
+s(\mu_t(z))-\beta_t^A(\delta)\sigma_t(z)
+\)
+is used below to expand the verifier-certified set. For a fixed context--safety pair \((\xi,\gamma)\), binary feedback in the original action space $\mathcal U^H$ is now abbreviated as \( \rho_\gamma(\hat{\mathbf u})=s\!\left(g(\phi_s(\hat{\mathbf u};\xi,\gamma))\right)\)~\footnote{The canonical kernel metric is used $d_k(z,z')
+:=
+\left\|
+k(z,\cdot)-k(z',\cdot)
+\right\|_{\mathcal H_k}$}.
+We want to pullback to our original action space, define
+\begin{equation}
+d_{\phi,k}^{\xi,\gamma}
+(\hat{\mathbf u},\hat{\mathbf u}')
+:=
+d_k\!\left(
+\phi_s(\hat{\mathbf u};\xi,\gamma), 
+\phi_s(\hat{\mathbf u}';\xi,\gamma)
+\right).
+\label{eq:pullback-kernel-metric}
+\end{equation}
+By the reproducing property in RKHS, under the assumption that $\phi_s$ is $L_s$--Lipschitz,
+\begin{equation}
+\left|
+\rho_\gamma(\hat{\mathbf u})
+-\rho_\gamma(\hat{\mathbf u}')
+\right|
+\le
+L_sB\,
+d_{\phi,k}^{\xi,\gamma}
+(\hat{\mathbf u},\hat{\mathbf u}').
+\label{eq:rkhs-spatial-bound}
+\end{equation}
+
+We can now define the verifier-certified set from its representation surrogate~\eqref{eq:logistic-verifier-model}
+\begin{equation}
+\mathcal V_{\gamma}(\xi)
+:=
+\left\{
+\hat{\mathbf u}\in\mathcal U^H:
+\rho_\gamma(\hat{\mathbf u})\ge h
+\right\}.
+\label{eq:representation-valid-certified-set}
+\end{equation}
+The certified generable set is
+\begin{equation}
+\mathcal G_{\theta_t}^{\tau}(\xi,\gamma)
+:=
+\Omega_{\theta_t}^{\tau}(\xi,\gamma)
+\cap
+\mathcal V_\gamma(\xi).
+\label{eq:certified-generable-set}
+\end{equation}
+
+Let \(S_t\) denote the action set certified by the lower confidence
+bound after \(t\) verified queries, and let
+\(\varnothing\neq S_0\subseteq
+\mathcal G_{\theta_0}^{\tau}(\xi,\gamma)\) denote an initially
+generable valid seed. For \(\epsilon>0\) and the fixed pair
+\((\xi,\gamma)\), define
+\begin{equation}
+\begin{aligned}
+R_\epsilon(S)
+:=\\
+\left\{
+\hat{\mathbf u}\in\mathcal U^H:
+\exists\hat{\mathbf u}'\in S,
+\rho_\gamma(\hat{\mathbf u}')-\epsilon\right.
+\left.
+-L_sB\,d_{\phi,k}^{\xi,\gamma}
+(\hat{\mathbf u},\hat{\mathbf u}')\ge h
+\right\}.
+\end{aligned}
+\label{eq:reachable-action-set}
+\end{equation}
+Let \(R_\epsilon^r(S_0)\) denote its \(r\)-fold application.
+
+\begin{lemma}[Adapted from Corollary~4.2~\cite{de2026active}]
+\label{lem:reachable-generable-coverage}
+Fix \(r\ge1\) and suppose that \(\phi_s\) is fixed during expansion.
+Under the confidence conditions of
+Lemma~\ref{thm:kernelized-logistic-confidence}, assume that the
+uncertainty-tilted sampler satisfies the local uncertainty-oracle
+condition of~\cite{de2026active}, and that each CFM update retains
+every newly certified action at density at least \(\tau\). Let
+\(\tau\) and \(T^\star\) satisfy the corresponding density-threshold
+and sample-complexity conditions. If \(\theta_{\hat n}\) is the
+updated policy after \(T^\star\) verified queries, then, with
+probability at least \(1-\delta\),
+\begin{equation}
+R_\epsilon^r(S_0)
+\subseteq
+\mathcal G_{\theta_{\hat n}}^\tau(\xi,\gamma)
+\subseteq
+\Omega_{\theta_{\hat n}}^\tau(\xi,\gamma).
+\label{eq:reachable-generable-inclusion}
+\end{equation}
+\end{lemma}
+
+Here, \(R_\epsilon^r(S_0)\) is the set connected to the initial seed
+by \(r\) local validity certificates in the learned geometry, rather
+than a dynamical reachable set. Concretely, uncertainty reduction
+yields \(R_\epsilon(S_t)\subseteq S_{t+T}\), while the CFM update
+retains \(S_{t+T}\) in its \(\tau\)-generable set. Repeating these two
+steps gives~\eqref{eq:reachable-generable-inclusion}; the spatial
+bound~\eqref{eq:rkhs-spatial-bound} keeps every reachable iterate in
+\(\mathcal V_\gamma(\xi)\).
