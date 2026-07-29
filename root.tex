@@ -559,7 +559,7 @@ In this way, the validity of sampled control policies is evaluated by the existe
 \subsection{Safe Flow Expansion}
 Generative policies constrain actions to the distribution of their demonstrations. Their behavior is usually limited to the dominant modes present in the demonstration data. This becomes problematic in OOD scenarios, where the model encounters states unseen during training. To address this distribution shift, recent large-scale imitation learning frameworks attempt to gather massive amounts of human intervention data to fill the coverage gaps. However, data collection is inherently unscalable for capturing all possible safety-critical actions. To this end, we can utilize the self-generation of the generative policies that can query safe actions, and one can \textit{expand} the region likely to be sampled from a pre-trained generative model~\cite{de2026active}. 
 
-Concretely, for a given state-observation context \(\xi\) and safety parameter \(\gamma\), the policy at expansion round \(n\) induces the \(\tau\)-generable set
+Concretely, for a given state-observation context \(\xi\) and safety parameter \(\gamma\), the policy at expansion round \(n\) induces the \textit{conditional generable set} associated with the probability density lower bound \(\tau\) defined as:
 \begin{equation}
     \Omega_{\theta_n}^{\tau}(\xi,\gamma)
     :=
@@ -569,20 +569,18 @@ Concretely, for a given state-observation context \(\xi\) and safety parameter \
     \right\}.
     \label{eq:conditional-generable-set}
 \end{equation}
-The pre-trained generable set is recovered by setting \(n=0\). Here,
-we abbreviate the \(H\) steps of predicted actions
-\(\hat{\mathbf u}_{k:k+H-1}\) as \(\hat{\mathbf u}\). Let
+Here we abbreviate the \(H\) steps of predicted actions
+\(\hat{\mathbf u}_{k:k+H-1}\) as \(\hat{\mathbf u}\). The pre-trained generable set is recovered by setting \(n=0\). The \textit{valid action set} is defined as the action certified multi-step safety of~\eqref{eq:socp}
 \begin{equation}
     \Omega^\star(\xi,\gamma)
     :=
     \left\{
     \hat{\mathbf u}\in\mathcal U^H:
     v_\gamma(\hat{\mathbf u};\xi)=1
-    \right\}
+    \right\}.
     \label{eq:verifier-certified-set}
 \end{equation}
-denote the valid action set certified by the verifier polytope
-of~\eqref{eq:socp}. By Proposition~\ref{prop: 3}, every MPPI-DCBF receding horizon belongs to \(\Omega^\star(\xi,\gamma)\). When the pre-trained policy represents only a few dominant modes, its
+The conditional generable set represents the actions the policy is likely given $\tau$, whereas the valid action set denotes the actions formally certified as safe. By Proposition~\ref{prop: 3}, every MPPI-DCBF receding horizon belongs to \(\Omega^\star(\xi,\gamma)\). When the pre-trained policy represents only a few dominant modes, its
 generable set may cover only a small portion of the certified set,
 \begin{equation}
     \operatorname{Vol}\!\left(
@@ -638,9 +636,9 @@ p_1^{\theta_n}(\mathbf u\mid\xi,\gamma)
 \exp\!\left(
 \sigma_n\!\left(\phi_s(\mathbf u;\xi,\gamma)\right)/\beta
 \right)
-d\mathbf u .
+d\mathbf u,
 \end{equation}
-
+and $\sigma_n$
 % \begin{algorithm}[H]
 % \caption{Safe Flow Expansion}
 % \label{alg:sfe}
@@ -699,64 +697,37 @@ d\mathbf u .
 \end{algorithm}
 \noindent \textbf{Algorithm details} Algorithm~\ref{alg:sfe} implements data acquisition on verified actions under the evolving CFM policy. At each receding-horizon step, the current policy proposes uncertainty-tilted actions, and among those, the verifier \(v_{\gamma_k}\) is used to acquire safe actions. The data is collected in a receding-horizon manner, provided that \(\xi_k\) is a sufficient statistic for the system dynamics (\textit{i.e.,} input of the generative policy), this receding-horizon interaction induces a Markovian closed-loop sampling process. During the data acquisition, one can execute (the execution cost \(C\)) expert actions \cite{ross2011reduction} or restrict execution to a safe admissible action set \cite{alshiekh2018safe}. In our case, verifier validity remains enforced by restricting selection to \(\mathcal I_k^+\) and constructing this execution cost for efficient safe coverage remains an open question.
 
-Having defined the conditional generable set and the verifier-valid action set, we now formalize how generable-set coverage translates into the probability of obtaining a safe action window under a finite parallel sampling budget. The result separates the high-probability coverage guarantee over the expansion process from the deployment-time probability induced by sampling the learned policy.
+Having defined the conditional generable set~\eqref{eq:conditional-generable-set} and the verifier-valid action set~\eqref{eq:representation-valid-certified-set}, we now state the main theorem on how set coverage via the expansion mechanism translates into the probability of obtaining a safe action window under a finite parallel sampling budget. The result separates the high-probability coverage guarantee over the expansion process from the deployment-time probability induced by sampling the learned policy. 
 
-\begin{corollary}[Availability of a multi-step safe action]
-\label{cor:safe-action-availability}
-Fix \((\xi,\gamma)\), and define
-\begin{equation}
-m_\gamma(\xi)
-:=
-\operatorname{Vol}\!\left(
-R_\epsilon^r(S_0)
-\cap
-\Omega^\star(\xi,\gamma)
-\right)>0.
-\label{eq:safe-reachable-volume}
-\end{equation}
+\begin{theorem}[Availability of a multi-step safe action]
+\label{thm:safe-action-availability}
+Assume the conditions of Assumption \ref{} and Lemma~\ref{thm:kernelized-logistic-confidence} and Lemma~\ref{lem:reachable-generable-coverage}, with $m_\gamma(\xi):=\operatorname{Vol}\!\left(R_\epsilon^r(S_0)\cap\Omega^\star(\xi,\gamma)\right)>0.$
 After the safe flow expansion in
 Lemma~\ref{lem:reachable-generable-coverage}, draw \(K\)
-conditionally independent samples
-\[
-\hat{\mathbf u}^{(1:K)}
-\overset{\mathrm{i.i.d.}}{\sim}
-p_1^{\theta_{\hat n}}(\cdot\mid\xi,\gamma).
-\]
-Then, conditioned on the \(1-\delta\) coverage event,
-\begin{equation}
-\Pr\!\left(
+conditionally independent samples $\hat{\mathbf u}^{(1:K)}
+\overset{\mathrm{i.i.d.}}{\sim}p_1^{\theta_{\hat n}}(\cdot\mid\xi,\gamma)$. Then conditioned on the \(1-\delta\) coverage event in Lemma~\ref{thm:kernelized-logistic-confidence},
+\begin{align}
+&\Pr\!\left(
 \exists j\le K:
 v_\gamma(\hat{\mathbf u}^{(j)};\xi)=1
-\right)
-\ge
+\right)\\
+&\ge
 1-
 \left(1-\tau m_\gamma(\xi)\right)^K
 \ge
 1-\exp\!\left(-K\tau m_\gamma(\xi)\right).
 \label{eq:safe-action-hit-probability}
-\end{equation}
-Consequently, over both expansion and generation randomness,
-\begin{equation}
-\Pr\!\left(
-\text{coverage holds and at least one action is safe}
-\right)
-\ge
-(1-\delta)
-\left[
-1-\left(1-\tau m_\gamma(\xi)\right)^K
-\right].
-\label{eq:joint-safe-action-probability}
-\end{equation}
-\end{corollary}
+\end{align}
+Consequently, over both expansion and generation randomness the probability of coverage holds and at least one action being safe is $(1-\delta)\left[1-\left(1-\tau m_\gamma(\xi)\right)^K\right].$
+\end{theorem}
 
 \begin{proof}
-On the coverage event,
-\[
+On the coverage event~\eqref{eq:reachable-generable-inclusion}, it holds that $
 R_\epsilon^r(S_0)
 \subseteq
 \Omega_{\theta_{\hat n}}^\tau(\xi,\gamma).
-\]
-Hence
+$
+Since the probability density lower bound $\tau$ applies to the entire volume $m_\gamma(\xi)$ under the coverage event, hence
 \[
 \Pr\!\left(
 \hat{\mathbf u}\in
