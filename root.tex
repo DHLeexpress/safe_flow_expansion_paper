@@ -699,7 +699,79 @@ d\mathbf u .
 \end{algorithm}
 \noindent \textbf{Algorithm details} Algorithm~\ref{alg:sfe} implements data acquisition on verified actions under the evolving CFM policy. At each receding-horizon step, the current policy proposes uncertainty-tilted actions, and among those, the verifier \(v_{\gamma_k}\) is used to acquire safe actions. The data is collected in a receding-horizon manner, provided that \(\xi_k\) is a sufficient statistic for the system dynamics (\textit{i.e.,} input of the generative policy), this receding-horizon interaction induces a Markovian closed-loop sampling process. During the data acquisition, one can execute (the execution cost \(C\)) expert actions \cite{ross2011reduction} or restrict execution to a safe admissible action set \cite{alshiekh2018safe}. In our case, verifier validity remains enforced by restricting selection to \(\mathcal I_k^+\) and constructing this execution cost for efficient safe coverage remains an open question.
 
-\noindent \textbf{Reachability analysis.} Here we use the bandits with preference feedback theory to provide confidence intervals for verifier uncertainty. Fix the context and safety pair \((\xi,\gamma)\), then the noised flow representation induces the conditional representation space
+Having defined the conditional generable set and the verifier-valid action set, we now formalize how generable-set coverage translates into the probability of obtaining a safe action window under a finite parallel sampling budget. The result separates the high-probability coverage guarantee over the expansion process from the deployment-time probability induced by sampling the learned policy.
+
+\begin{corollary}[Availability of a multi-step safe action]
+\label{cor:safe-action-availability}
+Fix \((\xi,\gamma)\), and define
+\begin{equation}
+m_\gamma(\xi)
+:=
+\operatorname{Vol}\!\left(
+R_\epsilon^r(S_0)
+\cap
+\Omega^\star(\xi,\gamma)
+\right)>0.
+\label{eq:safe-reachable-volume}
+\end{equation}
+After the safe flow expansion in
+Lemma~\ref{lem:reachable-generable-coverage}, draw \(K\)
+conditionally independent samples
+\[
+\hat{\mathbf u}^{(1:K)}
+\overset{\mathrm{i.i.d.}}{\sim}
+p_1^{\theta_{\hat n}}(\cdot\mid\xi,\gamma).
+\]
+Then, conditioned on the \(1-\delta\) coverage event,
+\begin{equation}
+\Pr\!\left(
+\exists j\le K:
+v_\gamma(\hat{\mathbf u}^{(j)};\xi)=1
+\right)
+\ge
+1-
+\left(1-\tau m_\gamma(\xi)\right)^K
+\ge
+1-\exp\!\left(-K\tau m_\gamma(\xi)\right).
+\label{eq:safe-action-hit-probability}
+\end{equation}
+Consequently, over both expansion and generation randomness,
+\begin{equation}
+\Pr\!\left(
+\text{coverage holds and at least one action is safe}
+\right)
+\ge
+(1-\delta)
+\left[
+1-\left(1-\tau m_\gamma(\xi)\right)^K
+\right].
+\label{eq:joint-safe-action-probability}
+\end{equation}
+\end{corollary}
+
+\begin{proof}
+On the coverage event,
+\[
+R_\epsilon^r(S_0)
+\subseteq
+\Omega_{\theta_{\hat n}}^\tau(\xi,\gamma).
+\]
+Hence
+\[
+\Pr\!\left(
+\hat{\mathbf u}\in
+R_\epsilon^r(S_0)\cap\Omega^\star(\xi,\gamma)
+\right)
+\ge
+\tau m_\gamma(\xi).
+\]
+Conditional independence gives the complement probability in
+\eqref{eq:safe-action-hit-probability}. Every sample in
+\(\Omega^\star(\xi,\gamma)\) passes the deterministic SOCP verifier
+and is therefore multi-step safe.
+\end{proof}
+
+Here we use the bandits with preference feedback theory to provide confidence intervals for verifier uncertainty. Fix the context and safety pair \((\xi,\gamma)\), then the noised flow representation induces the conditional representation space
 \begin{equation}
     \begin{aligned}
         \phi_s(\cdot;\xi,\gamma)&:\mathcal U^H\rightarrow
@@ -741,7 +813,6 @@ queries \(\{(z_i,y_i)\}_{i=1}^t\) (See Prop.1~\cite{pasztor2024bandits}). Its un
 where \([k_t(z)]_i=k(z_i,z)\), \([K_t]_{ij}=k(z_i,z_j)\),
 \(\lambda>0\), and
 \(\kappa:=\sup_{|a|\le B}1/\dot{s}(a)\).
-
 \begin{lemma}[Thm.2~\cite{pasztor2024bandits}]
 \label{thm:kernelized-logistic-confidence}
 Let
@@ -833,6 +904,60 @@ The certified generable set is
 \mathcal V_\gamma(\xi).
 \label{eq:certified-generable-set}
 \end{equation}
+
+Let \(S_t\) denote the action set certified by the lower confidence
+bound after \(t\) verified queries, and let
+\(\varnothing\neq S_0\subseteq
+\mathcal G_{\theta_0}^{\tau}(\xi,\gamma)\) denote an initially
+generable valid seed. For \(\epsilon>0\) and the fixed pair
+\((\xi,\gamma)\), define
+\begin{equation}
+\begin{aligned}
+R_\epsilon(S)
+:=\\
+\left\{
+\hat{\mathbf u}\in\mathcal U^H:
+\exists\hat{\mathbf u}'\in S,
+\rho_\gamma(\hat{\mathbf u}')-\epsilon\right.
+\left.
+-L_sB\,d_{\phi,k}^{\xi,\gamma}
+(\hat{\mathbf u},\hat{\mathbf u}')\ge h
+\right\}.
+\end{aligned}
+\label{eq:reachable-action-set}
+\end{equation}
+Let \(R_\epsilon^r(S_0)\) denote its \(r\)-fold application.
+
+\begin{lemma}[Adapted from Corollary~4.2~\cite{de2026active}]
+\label{lem:reachable-generable-coverage}
+Fix \(r\ge1\) and suppose that \(\phi_s\) is fixed during expansion.
+Under the confidence conditions of
+Lemma~\ref{thm:kernelized-logistic-confidence}, assume that the
+uncertainty-tilted sampler satisfies the local uncertainty-oracle
+condition of~\cite{de2026active}, and that each CFM update retains
+every newly certified action at density at least \(\tau\). Let
+\(\tau\) and \(T^\star\) satisfy the corresponding density-threshold
+and sample-complexity conditions. If \(\theta_{\hat n}\) is the
+updated policy after \(T^\star\) verified queries, then, with
+probability at least \(1-\delta\),
+\begin{equation}
+R_\epsilon^r(S_0)
+\subseteq
+\mathcal G_{\theta_{\hat n}}^\tau(\xi,\gamma)
+\subseteq
+\Omega_{\theta_{\hat n}}^\tau(\xi,\gamma).
+\label{eq:reachable-generable-inclusion}
+\end{equation}
+\end{lemma}
+
+Here, \(R_\epsilon^r(S_0)\) is the set connected to the initial seed
+by \(r\) local validity certificates in the learned geometry, rather
+than a dynamical reachable set. Concretely, uncertainty reduction
+yields \(R_\epsilon(S_t)\subseteq S_{t+T}\), while the CFM update
+retains \(S_{t+T}\) in its \(\tau\)-generable set. Repeating these two
+steps gives~\eqref{eq:reachable-generable-inclusion}; the spatial
+bound~\eqref{eq:rkhs-spatial-bound} keeps every reachable iterate in
+\(\mathcal V_\gamma(\xi)\).
 
 
 \noindent \textbf{Baseline method} We adapt CFM-MPPI~\cite{mizuta2025unified}, which combines reward-guided flow generation with sampling-based MPPI refinement. Given a base pre-trained vector field $\mathbf{v}^{\theta_{\text{0}}}(\mathbf{x}\!\mid\! \mathbf{o},\gamma)$, the guided velocity field is the local gradient ascent of the combined reward:
