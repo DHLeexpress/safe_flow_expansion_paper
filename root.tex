@@ -788,7 +788,9 @@ Conditional independence gives the complement probability in
 \(\Omega^\star(\xi,\gamma)\) passes the deterministic SOCP verifier
 and is therefore multi-step safe.
 \end{proof}
-
+\begin{corollary}
+    Given the same $\xi$, the probability bound~\eqref{eq:safe-action-hit-probability} given by the valid action set $\Omega^\star(\xi,\gamma)$, is monotonically 
+\end{corollary}
 
 \noindent \textbf{Baseline method} We adapt CFM-MPPI~\cite{mizuta2025unified}, which combines reward-guided flow generation with sampling-based MPPI refinement. Given a base pre-trained vector field $\mathbf{v}^{\theta_{\text{0}}}(\mathbf{x}\!\mid\! \mathbf{o},\gamma)$, the guided velocity field is the local gradient ascent of the combined reward:
 \begin{equation}
@@ -827,7 +829,7 @@ Since the generative model learns a continuous mapping, it can interpolate betwe
 
 \section{Experiments and Discussion}
 \note{Structure for each subsection: 1. Define data used for training, In-distribution and OOD, 2. Safe Flow Expansion, how we subsequently gather positive samples (execution strategy) }
-For simulation, we evaluate our framework on 2D goal-reaching task in cluttered environments and a dynamic pedestrian simulator \cite{helbing1995social}. We used 2D double integrator dynamics for robot policy generation. The base CFM model uses a vanilla flow-matching velocity network of a single MLP with 3 hidden layers, conditioned on the input of (i) a 5-dimensional state (the relative goal position, the velocity, and the safety parameter $\gamma$), (ii) a 32-dim obstacle embedding that encodes a nominal polytope barrier function in discretized grids, and output predicted action sequences. The 32-dim penultimate representation at the flow time $s$ = 0.9 gives the flow representation for the uncertainty estimation. 
+For simulation experiments, we evaluate our framework on 2D goal-reaching task in cluttered environments and a dynamic pedestrian simulator \cite{helbing1995social}. We used 2D double integrator dynamics for robot policy generation. The base CFM model uses a vanilla flow-matching velocity network of a single MLP with 3 hidden layers, conditioned on the input of (i) a 5-dimensional state (the relative goal position, the velocity, and the safety parameter $\gamma$), (ii) a 32-dim obstacle embedding that encodes a nominal polytope barrier function in discretized grids, and output predicted action sequences. The 32-dim penultimate representation at the flow time $s$ = 0.9 gives the flow representation for the uncertainty estimation. 
 
 For hardware experiments, we extend our method into a 3D path planning problem. We used 3D double integrator dynamics for robot trajectory generation and evaluate using \textit{Crazyflie} quadrotor drone. We use an \textit{Vicon} motion capture system to provide the real-time position. The desired position provided by the expanded model is tracked at a rate of 50Hz. The CFM is similarly structured but uses only a 10-dimensional state (the relative goal position, the velocity, and the safety parameter $\gamma$), and output predicted action sequences.
 
