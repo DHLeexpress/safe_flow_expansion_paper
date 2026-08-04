@@ -1,4 +1,136 @@
 \section{Appendix: Safe Flow Expansion Analysis}\label{sec:safe-flow-expansion-analysis}
+
+\textbf{Reachability Analysis.} Given the statistical model in~\eqref{eq:prob_valid_set}, binary feedback in the original action space $\mathcal U^H$ is given as \( \rho_\gamma(\hat{\mathbf u})=s\!\left(g(\phi_s(\hat{\mathbf u};\xi,\gamma))\right)\). For \(\epsilon>0\), define the one-step reachable operator as:
+\begin{equation}
+\begin{aligned}
+R_\epsilon(S)
+&:=
+\Bigl\{
+\hat{\mathbf u}\in\mathcal U^H:
+\exists\hat{\mathbf u}'\in S\ \text{s.t.}\\[-1mm]
+&\quad
+\rho_\gamma(\hat{\mathbf u}')-\epsilon
+-L_sB\,d_{\phi,k}^{\xi,\gamma}
+(\hat{\mathbf u},\hat{\mathbf u}')\ge h
+\Bigr\}.
+\end{aligned}
+\label{eq:reachable-action-set}
+\end{equation}
+Subsequently, we can define 
+\begin{equation}
+\begin{aligned}
+R_\epsilon^0(S)&:=S,\qquad
+R_\epsilon^{j+1}(S):=R_\epsilon(R_\epsilon^j(S)),\\
+R_\epsilon^{\le r}(S)&:=
+\bigcup_{j=0}^{r}R_\epsilon^j(S).
+\end{aligned}
+\label{eq:cumulative-reachable-action-set}
+\end{equation}
+
+\begin{lemma}[Corollary~4.2~\cite{de2026active}]
+\label{lem:reachable-generable-coverage}
+The following is its conditional action-space adaptation. Fix \(r\ge1\)
+and let \(T^\star=rT\) be verifier queries. Under the
+assumptions in Appendix~\ref{sec:safe-flow-expansion-analysis} (TODO), with probability at least \(1-\delta\),
+\begin{equation}
+R_\epsilon^r(S_0)
+\subseteq
+R_\epsilon^{\le r}(S_0)
+\subseteq
+S_{T^\star}
+\subseteq
+\Omega_{\theta_{T^\star}}^\tau(\xi,\gamma).
+\label{eq:main_inclusion}
+\end{equation}
+\end{lemma}
+
+Define the coverage event and its deterministic verifier-safe part as
+\begin{align}
+\mathcal E_{\mathrm{cov}}
+&:=
+\left\{
+R_\epsilon^{\le r}(S_0)
+\subseteq S_{T^\star}
+\subseteq\Omega_{\theta_{T^\star}}^\tau(\xi,\gamma)
+\right\},
+\label{eq:coverage-event}\\
+A_{\gamma,r}(\xi)
+&:=
+R_\epsilon^{\le r}(S_0)
+\cap\Omega^\star(\xi,\gamma).
+\label{eq:safe-reachable-region}
+\end{align}
+On \(\mathcal E_{\mathrm{cov}}\),
+\begin{equation}
+A_{\gamma,r}(\xi)
+\subseteq
+\Omega_{\theta_{T^\star}}^\tau(\xi,\gamma)
+\cap\Omega^\star(\xi,\gamma).
+\label{eq:safe-generable-inclusion}
+\end{equation}
+Moreover, Assumption~\ref{ass:positive-volume-seed} gives
+\begin{equation}
+\begin{aligned}
+m_\gamma(\xi)
+&:=
+\operatorname{Vol}\!\left(A_{\gamma,r}(\xi)\right)\\
+&\ge\operatorname{Vol}(S_0)>0.
+\end{aligned}
+\label{eq:positive-reachable-volume}
+\end{equation}
+
+
+Having defined the conditional generable set~\eqref{eq:conditional-generable-set} and the verifier-valid action set~\eqref{eq:representation-valid-certified-set}, and the rechable operator~\eqref{eq:reachable-action-set}, we now state the main theorem on how set coverage via the expansion mechanism translates into the probability of obtaining a safe action window under a finite parallel sampling budget. The result separates the high-probability coverage guarantee over the expansion process from the deployment-time probability induced by sampling the learned policy. 
+
+\begin{theorem}[Availability of a multi-step safe action]
+\label{thm:safe-action-availability}
+Assume the conditions of Lemma~\ref{lem:reachable-generable-coverage} and Lemma~\ref{thm:kernelized-logistic-confidence}, with $m_\gamma(\xi):=\operatorname{Vol}\!\left(R_\epsilon^r(S_0)\cap\Omega^\star(\xi,\gamma)\right)>0.$
+After the safe flow expansion in
+Lemma~\ref{lem:reachable-generable-coverage}, draw \(K\)
+conditionally independent samples $\hat{\mathbf u}^{(1:K)}
+\overset{\mathrm{i.i.d.}}{\sim}p_1^{\theta_{\hat n}}(\cdot\mid\xi,\gamma)$. Then conditioned on the \(1-\delta\) coverage event in Lemma~\ref{thm:kernelized-logistic-confidence},
+\begin{align}
+&\Pr\!\left(
+\exists j\le K:
+v_\gamma(\hat{\mathbf u}^{(j)};\xi)=1
+\right)\\
+&\ge
+1-
+\left(1-\tau m_\gamma(\xi)\right)^K
+\ge
+1-\exp\!\left(-K\tau m_\gamma(\xi)\right).
+\label{eq:safe-action-hit-probability}
+\end{align}
+Consequently, over both expansion and generation randomness the probability of coverage holds and at least one action being safe is $(1-\delta)\left[1-\left(1-\tau m_\gamma(\xi)\right)^K\right].$
+\end{theorem}
+{\color{red} MH Question 1: If the verifier is not used at deployment, the selected sample could still be unsafe, right?}
+
+{\color{red} MH Q2: this theorem is written for fixed context $\xi$, which may never repeat during the mission}
+
+\begin{proof}
+On the coverage event~\eqref{eq:reachable-generable-inclusion}, it holds that $
+R_\epsilon^r(S_0)
+\subseteq
+\Omega_{\theta_{\hat n}}^\tau(\xi,\gamma).
+$
+Since the probability density lower bound $\tau$ applies to the entire volume $m_\gamma(\xi)$ under the coverage event, hence
+\[
+\Pr\!\left(
+\hat{\mathbf u}\in
+R_\epsilon^r(S_0)\cap\Omega^\star(\xi,\gamma)
+\right)
+\ge
+\tau m_\gamma(\xi).
+\]
+Conditional independence gives the complement probability in
+\eqref{eq:safe-action-hit-probability}. Every sample in
+\(\Omega^\star(\xi,\gamma)\) passes the deterministic SOCP verifier
+and is therefore multi-step safe.
+\end{proof}
+\begin{corollary}
+    Given the same $\xi$, the probability bound~\eqref{eq:safe-action-hit-probability} given by the valid action set $\Omega^\star(\xi,\gamma)$, is monotonically 
+\end{corollary}
+
 Here we use the bandits with preference feedback theory to provide confidence intervals for verifier uncertainty. Fix the context and safety pair \((\xi,\gamma)\), then the noised flow representation induces the conditional representation space
 \begin{equation}
     \begin{aligned}
