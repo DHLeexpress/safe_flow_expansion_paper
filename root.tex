@@ -520,7 +520,8 @@ Under exact discrete-time control-affine dynamics, convex input constraints $\ma
 
 % \Cref{prop:2} holds to ensure the full-horizon safety of the averaged plan as illustrated in Fig.~\ref{fig:keystone}(d). Despite the fact that only the current optimal control $u^*_{k\mid k}$ is applied, the full-horizon safety of the optimal control sequence is critical for the subsequent step. The remaining portion of the safe trajectory provides a warm start for the next optimization, anchoring the sampling distribution in a safe region of the state space. Our approach in leveraging DCBFs in a model predictive fashion draws a parallel to optimization-based methods, such as MPC-CBF~\cite{zeng2021safety}.
 
-\subsection{Conditional Flow Matching for Safety-tunable Policy Generation}
+% \subsection{Conditional Flow Matching for Safety-tunable Policy Generation}
+
 % To generate a policy that can modulate its behavior in real time, we train a generative model on the dataset from our MPPI-DCBF planner. As shown in Fig.~\ref{fig:keystone}(b), our model consists of a sequential encoder and a contextual conditional flow matching (CFM) head. The encoder, a gated recurrent unit (GRU), processes a history of states, observations, and controls to produce a context vector $c_t$. This context allows the model to capture long-term dependencies, which is critical for resolving ambiguities such as deciding which side of an obstacle to navigate around (see Fig.~\ref{fig:flowmatching}). The CFM head then learns a vector field conditioned on this context, the current state and observation, together denoted by $o_t$, and the desired safety level $\gamma_t$ to produce the ground truth control action $u^*_{t\mid t}$ by minimizing the conditional flow matching loss in \eqref{eq:cfm_cost}. The complete training and inference procedure is detailed in Algorithm~\ref{alg:cfm}, yielding a real-time policy that can be tuned by adjusting the input parameter $\gamma(k)$ without any online sampling.
 
 \subsection{Multi-step Safety Verification}
@@ -600,15 +601,18 @@ Here we abbreviate the \(H\) steps of predicted actions
     \right\}.
     \label{eq:verifier-certified-set}
 \end{equation}
-The conditional generable set represents the actions the policy is likely given $\tau$, whereas the valid action set denotes the actions formally certified as safe. By Proposition~\ref{prop: 3}, every MPPI-DCBF receding horizon belongs to \(\Omega^\star(\xi,\gamma)\). When the pre-trained policy represents only a few dominant modes, its
-generable set may cover only a small portion of the certified set,
-\begin{equation}
-    \operatorname{Vol}\!\left(
-    \Omega_{\theta_0}^{\tau}(\xi,\gamma)
-    \right)
-    \ll
-    \operatorname{Vol}\!\left(\Omega^\star(\xi,\gamma)\right).
-\end{equation}
+The conditional generable set represents the actions the policy is likely given $\tau$, whereas the valid action set denotes the actions formally certified as safe. Here, by Proposition~\ref{prop: 3}, every MPPI-DCBF receding horizon belongs to \(\Omega^\star(\xi,\gamma)\).
+
+
+% When the pre-trained policy represents only a few dominant modes, its
+% generable set may cover only a small portion of the certified set,
+% \begin{equation}
+%     \operatorname{Vol}\!\left(
+%     \Omega_{\theta_0}^{\tau}(\xi,\gamma)
+%     \right)
+%     \ll
+%     \operatorname{Vol}\!\left(\Omega^\star(\xi,\gamma)\right).
+% \end{equation}
 
 % For a fixed target context, the verifier-positive support gap targeted
 % by expansion is therefore
