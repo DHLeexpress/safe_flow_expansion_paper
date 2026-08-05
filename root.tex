@@ -531,7 +531,7 @@ Before we introduce our main algorithm, here we define the deterministic verifie
 \noindent \textbf{Verifier Polytope for Expansion.}
 Concretely, let \(c=q_0\in\mathbb R^d\) denote the current robot position in the free space \(\mathcal{Q}\) and let
 \(\{q_t\}_{t=0}^{H}\) be a candidate local trajectory submitted to verifier, with
-\(p_t:=q_t-c\).  For a barrier parameter \(\gamma\in(0,1]\), define
+\(p_t:=q_t-c\).  For a safety parameter \(\gamma\in(0,1]\), define
 \(\alpha_t=(1-\gamma)^t\) and \(\beta_t=1-\alpha_t\). We then formulate under each sensed circular obstacle that is represented as \(\mathcal O_i=\{x\in\mathbb R^d:\|x-o_i\|_2\le r_i\}\) where \(o_i\) and \(r_i\) are its center and radius. The nominal construction fixes each obstacle-face normal using the closest-point direction from the current robot position. This common orientation is required for the MPPI averaging argument, but it can reject a collision-free candidate that passes the obstacle along a different side. In contrast, the verifier evaluates one candidate trajectory at a time and therefore does not require a face shared across different candidates. We optimize both the orientation $\mathbf a_i$ and the margin $m_i$ so that the separating face is adapted to the geometry of the submitted trajectory while still excluding the entire obstacle. This candidate-dependent face can certify trajectories outside the nominal polytope without relaxing the finite-horizon DCBF decay condition. 
 For each sensed obstacle, we seek a face
 \[
@@ -550,25 +550,41 @@ The optimization problem is solved for each nearby obstacle within the sensing r
 \end{aligned}
 \label{eq:socp}
 \end{equation}
-
-The first constraint is the safety specification
+% The objective is linear, the trajectory constraints are affine, and the obstacle-separation and normalization constraints are second-order-cone representable; hence the problem is an SOCP. 
+The first constraint is the multi-step safety specification
 \(h^{\text{poly}}(\xki;\xk)\geq \alpha_t\) and the second constraint is the separation since
 \(\min_{x\in\mathcal O_i}\ai^\top(x-c)
 =\ai^\top(o_i-c)-r_i\|\ai\|_2\). The third and fourth constraint is the normalization bound and for specifying minimum margin.
-{\color{red}MJ: Need more detailed explanation on this optimization problem.}
-After solving all per-obstacle
-faces, the verifier polytope has the form \footnote{In order to guarantee the bounded verifier polytope in the sensing region, we solve \eqref{eq:socp} for auxiliary obstacles that is tangent to the largest K-sided polytope; K = 16 is used.}
-\[
+% {\color{red}MJ: Need more detailed explanation on this optimization problem.}
+After solving all per-obstacle faces, the verifier polytope has the form \footnote{In order to guarantee the bounded verifier polytope in the sensing region, we solve \eqref{eq:socp} for auxiliary obstacles that is tangent to the largest K-sided polytope; K = 16 is used.}
+\begin{equation}
 \mathcal P
 =
 \bigcap_i
 \{x:\ai^\top(x-c)\le m_i\},
-\]
+\label{eq:verifierpolytope}
+\end{equation}
 % or equivalently \(Ax\le b\) with \(A_i=a_i^\top\) and
 % \(b_i=a_i^\top c+m_i\). 
-The objective is linear, the trajectory constraints are affine, and the obstacle-separation and normalization constraints are second-order-cone representable; hence the problem is an SOCP. In this way, the validity of sampled control policies is evaluated by the existence of the verifier polytope in terms of multi-step safety, \textit{i.e., $v(\mathbf{\hat u}) =1$}. {\color{red} MJ: The verifier is not defined. Should it also take the current state or observation as input, since it evaluates the validity of a sampled control policy in the current context?}
+Having formulated the optimization problem for the existence of multi-step safety specification, we formally define the \textit{validity} of an arbitrary control policy.
+\begin{definition}
+Let \(v_\gamma(\hat{\mathbf u};\xi) \in \{0, 1\}\) be a indicator function that returns \(1\) if the optimization problem~\eqref{eq:socp} is feasible for action \(\hat{\mathbf u}\) under context \(\xi\) and safety parameter \(\gamma\), and \(0\) otherwise. The \textit{valid action set} is defined as the action certified multi-step safety of~\eqref{eq:socp}
+\begin{equation}
+    \Omega^\star(\xi,\gamma)
+    :=
+    \left\{
+    \hat{\mathbf u}\in\mathcal U^H:
+    v_\gamma(\hat{\mathbf u};\xi)=1
+    \right\},
+    \label{eq:verifier-certified-set}
+\end{equation}
+and action \(\hat{\mathbf u} \in \Omega^\star(\xi,\gamma)\) is a \textit{valid} action that consequently  guarantees the existence of a verifier polytope~\eqref{eq:verifierpolytope}.
+\end{definition}
+Here we abbreviate the \(H\) steps of predicted actions
+\(\hat{\mathbf u}_{k:k+H-1}\) as \(\hat{\mathbf u}\).
+% {\color{red} MJ: The verifier is not defined. Should it also take the current state or observation as input, since it evaluates the validity of a sampled control policy in the current context?}
 
-\begin{proposition} \label{prop: 3} A stochastic policy $\mathbf{u}_{k:k+H-1\mid k}$ with length $H$ produced by MPPI-DCBF~\eqref{eq:mppi-dcbf}, which is the constrained stochastic optimization problem solution under the outward normal $n$ from \eqref{eq:aff_barrier}, is a valid multi-step sample, \textit{i.e.,} \(v(\mathbf{u}_{k:k+H-1\mid k)} =1.\) Therefore, the nominal-polytope certificate induces a feasible face of the SOCP verifier.
+\begin{proposition} \label{prop: 3} A stochastic policy $\mathbf{u}_{k:k+H-1\mid k}$ with length $H$ produced by MPPI-DCBF~\eqref{eq:mppi-dcbf} associated with safety parameter $\gamma$, which is the constrained stochastic optimization problem solution under the outward normal $n$ from \eqref{eq:aff_barrier}, is a valid multi-step sample, \textit{i.e.,} \(v_\gamma(\mathbf{u}_{k:k+H-1\mid k}) =1.\) Therefore, the nominal-polytope certificate induces a feasible face of the SOCP verifier.
 \end{proposition}
 
 % \begin{proposition}
@@ -576,9 +592,15 @@ The objective is linear, the trajectory constraints are affine, and the obstacle
 % Fix a context $\xi_k$ and safety parameter $\gamma$. Any candidate action window whose model rollout satisfies the nominal-polytope constraints over the verification horizon is verifier-positive, provided that $m_{\min}$ does not exceed the corresponding nominal face margin. Consequently, every individually accepted MPPI-DCBF rollout is verifier-positive. The averaged MPPI control window is also verifier-positive whenever its full predicted trajectory satisfies the nominal-polytope constraints; in particular, this holds for the LTI case covered by Proposition~\ref{prop:2}.
 % \end{proposition}
 
+
+Generative policies constrain actions to the distribution of their demonstrations.
+While Proposition~\ref{prop: 3} formally guarantees that the MPPI-DCBF planner allows us to produce rapid safe demonstrations as verifier-positive trajectories, relying solely on these demonstrations inherently yields a subset of the distribution of all possible safe actions.  
+
 \noindent 
-\section{Safe Flow Expansion}
-Generative policies constrain actions to the distribution of their demonstrations. Their behavior is usually limited to the dominant modes present in the demonstration data. This becomes problematic in OOD scenarios, where the model encounters states unseen during training. To address this distribution shift, recent large-scale imitation learning frameworks attempt to gather massive amounts of human intervention data to fill the coverage gaps \cite{}. However, data collection is inherently unscalable for capturing all possible safety-critical actions. To this end, we instead use the current generative policy to propose candidate action windows, query their validity with the deterministic verifier, and retrain on the resulting verified data~\cite{de2026active}. 
+\subsection{Safe Flow Expansion}
+We now turn our attention to acquiring missing safe behavioral modes for a conditional generative policy. Safe Flow Expansion enables this by first pretraining from that safe action support and increasing the probability mass on the same multi-step safe action windows.
+
+ This becomes problematic in OOD scenarios, where the model encounters states unseen during training. To address this distribution shift, recent large-scale imitation learning frameworks attempt to gather massive amounts of human intervention data to fill the coverage gaps \cite{}. However, data collection is inherently unscalable for capturing all possible safety-critical actions. To this end, we instead use the current generative policy to propose candidate action windows, query their validity with the deterministic verifier, and retrain on the resulting verified data~\cite{de2026active}. 
 
 Concretely, for a given state-observation context \(\xi\) and safety parameter \(\gamma\), the policy at expansion round \(n\) induces the \textit{conditional generable set} associated with the probability density lower bound \(\tau\) defined as:
 \begin{equation}
@@ -590,18 +612,7 @@ Concretely, for a given state-observation context \(\xi\) and safety parameter \
     \right\}.
     \label{eq:conditional-generable-set}
 \end{equation}
-Here we abbreviate the \(H\) steps of predicted actions
-\(\hat{\mathbf u}_{k:k+H-1}\) as \(\hat{\mathbf u}\). The pre-trained generable set is recovered by setting \(n=0\). The \textit{valid action set} is defined as the action certified multi-step safety of~\eqref{eq:socp}
-\begin{equation}
-    \Omega^\star(\xi,\gamma)
-    :=
-    \left\{
-    \hat{\mathbf u}\in\mathcal U^H:
-    v_\gamma(\hat{\mathbf u};\xi)=1
-    \right\}.
-    \label{eq:verifier-certified-set}
-\end{equation}
-The conditional generable set represents the actions the policy is likely given $\tau$, whereas the valid action set denotes the actions formally certified as safe. Here, by Proposition~\ref{prop: 3}, every MPPI-DCBF receding horizon belongs to \(\Omega^\star(\xi,\gamma)\).
+Here, the pre-trained generable set is recovered by setting \(n=0\). The conditional generable set represents the actions the policy is likely given $\tau$, whereas the valid action set denotes the actions formally certified as safe. Here, by Proposition~\ref{prop: 3}, every MPPI-DCBF receding horizon belongs to \(\Omega^\star(\xi,\gamma)\).
 
 
 % When the pre-trained policy represents only a few dominant modes, its
