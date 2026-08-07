@@ -1,3 +1,14 @@
+
+% Concretely, let \(c=q_0\in\mathbb R^d\) denote the current robot position in the free space \(\mathcal{Q}\) and let
+% \(\{q_t\}_{t=0}^{H}\) be a candidate local trajectory submitted to verifier, with
+% \(p_t:=q_t-c\).  For a safety parameter \(\gamma\in(0,1]\), define
+% \(\alpha_t=(1-\gamma)^t\) and \(\beta_t=1-\alpha_t\). We then formulate under each sensed circular obstacle that is represented as \(\mathcal O_i=\{x\in\mathbb R^d:\|x-o_i\|_2\le r_i\}\) where \(o_i\) and \(r_i\) are its center and radius. The nominal construction fixes each obstacle-face normal using the closest-point direction from the current robot position. This common orientation is required for the MPPI averaging argument, but it can reject a collision-free candidate that passes the obstacle along a different side. In contrast, the verifier evaluates one candidate trajectory at a time and therefore does not require a face shared across different candidates. We optimize both the orientation $\mathbf a_i$ and the margin $m_i$ so that the separating face is adapted to the geometry of the submitted trajectory while still excluding the entire obstacle. This candidate-dependent face can certify trajectories outside the nominal polytope without relaxing the finite-horizon DCBF decay condition. 
+% For each sensed obstacle, we seek a face
+% \[
+% \mathbf a_i^\top(x-c)\le m_i,
+% \]
+% where $\mathbf a_i\in\mathbb R^d$ is the face normal and
+% $m_i>0$ is its robot-centered margin.
 % %%%%%%%%%%%%%%%%Start_of_Algorithm1-%%%%%%%%%%%%%%%%
 % \begin{algorithm}[H]
 % \caption{MPPI-DCBF Algorithm}\label{alg:safe-mppi}

@@ -36,6 +36,8 @@
 \newcommand{\xk}{\mathbf{\x}_{k\mid k}}
 \newcommand{\xki}{\mathbf{\x}_{k+i\mid k}}
 \newcommand{\ai}{\mathbf{a}_{i}}
+\newcommand{\aj}{\mathbf{a}_{j}}
+\newcommand{\oj}{\mathbf{o}_{j}}
 
 % \renewcommand{\qedsymbol}{$\blacksquare$}
 
@@ -69,7 +71,7 @@ SAFER: SAfe Flow Expansion for Robotics \\ with Applications in Generative Motio
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \begin{abstract}
 
-A tight connection between generative control policies and sampling-based predictive control (SBPC) has recently gained attention in robotics. Enabled by modern computing architectures, sampling-based predictive control can generate multi-modal action sequences under model-based safety constraints, whereas conditional flow matching amortizes these behaviors into a fast generative policy. However, a pretrained generative policy can assign little probability to safe action windows in out-of-distribution (OOD) contexts. To address these issues, we propose the offline Safe Flow Expansion framework built upon model predictive path integral control (MPPI) and conditional flow matching (CFM). With the safety-conditioned receding-horizon control distribution learned from MPPI demonstrations, our framework self-generates and uses deterministic verification to collect multi-step verifier-positive windows. We evaluate the performance of our adaptive design in safety-critical settings in both 2D and 3D unseen environments.
+A tight connection between generative control policies and sampling-based predictive control (SBPC) has recently gained attention in robotics. Enabled by modern computing architectures, sampling-based predictive control can generate multi-modal action sequences under model-based safety constraints, whereas conditional flow matching amortizes these behaviors into a fast generative policy. However, a pretrained generative policy can assign little probability to safe action windows in out-of-distribution (OOD) contexts. To address these issues, we propose the offline Safe Flow Expansion framework built upon model predictive path integral control (MPPI) and conditional flow matching (CFM). With the safety-conditioned receding-horizon control distribution learned from MPPI demonstrations, our framework self-generates and uses deterministic verification to collect finite-horizon DCBF certificate actions. We evaluate the performance of our adaptive design in safety-critical settings in both 2D and 3D unseen environments.
 
 % Sampling-based predictive control (SBPC) algorithms, such as model predictive path integral (MPPI), have become a popular method for robotic motion planning applications due to their computational efficiency on modern computing architectures. However, it is difficult to enforce hard safety constraints for such techniques because they average over samples to realize the final set of control inputs. While individual samples may satisfy a given constraint, the sample average can violate the safety requirement. Similarly, diffusion and flow matching algorithms have become a popular way to generate robot motion trajectories. In this paper, we introduce a novel strategy to learn a conditional generative model that allows for online tuning of a safety parameter. As for sampling-based controllers, it is difficult to enforce hard safety-critical constraints in these methods. To address these limitations, this paper proposes a safety-critical framework for SBPCs and generative trajectory generation, based on the framework of discrete-time control barrier functions (DCBFs). Our DCBF-based method ensures safety during both the sampling and averaging phases of SBPCs, efficiently producing a rich dataset of multi-modal, collision-free behaviors. We then train a conditional flow matching model on these data to learn a generative policy that can be modulated at inference time by a single safety parameter. We demonstrate our approach for cluttered environments for a double integrator and a quadrotor simulation. Our results indicate that the proposed MPPI-DCBF framework consistently achieves superior safety guarantees compared to baseline MPPI methods, together with a context-aware conditional flow matching model, paving the way for real-time, safe SBPC and generative robotic control.
 
@@ -379,7 +381,7 @@ A valid control barrier function on $\mathcal{U}=\mathbb{R}^{d_u}$ is usually as
 \begin{figure}
     \centering
     \includegraphics[width=0.99\linewidth]{images/verifier_v2.pdf}
-    \caption{ Illustrative example of constructing the implicit safe set \eqref{eq:poly_safeset} (Top) and the verifier \eqref{eq:socp} (Bottom) in the case of $H=4, d=2, \mathcal{O} = \{1,2\}, \gamma=0.5$. Despite the same environment and the current robot position shown as a green dot, the verifier admits less conservative safe actions.}
+    \caption{ Illustrative example of constructing the nominal polytope \eqref{eq:poly_safeset} (Top) and the verifier polytope to verify the finite-horizon DCBF condition \eqref{eq:socp} (Bottom) in the case of $H=4, d=2, \mathcal{O} = \{1,2\}, \gamma=0.5$. Despite the same environment and the current robot position shown as a green dot, the verifier admits less conservative safe actions.}
     \label{fig:polytope}
 \end{figure}
 
@@ -525,48 +527,45 @@ Under exact discrete-time control-affine dynamics, convex input constraints $\ma
 % To generate a policy that can modulate its behavior in real time, we train a generative model on the dataset from our MPPI-DCBF planner. As shown in Fig.~\ref{fig:keystone}(b), our model consists of a sequential encoder and a contextual conditional flow matching (CFM) head. The encoder, a gated recurrent unit (GRU), processes a history of states, observations, and controls to produce a context vector $c_t$. This context allows the model to capture long-term dependencies, which is critical for resolving ambiguities such as deciding which side of an obstacle to navigate around (see Fig.~\ref{fig:flowmatching}). The CFM head then learns a vector field conditioned on this context, the current state and observation, together denoted by $o_t$, and the desired safety level $\gamma_t$ to produce the ground truth control action $u^*_{t\mid t}$ by minimizing the conditional flow matching loss in \eqref{eq:cfm_cost}. The complete training and inference procedure is detailed in Algorithm~\ref{alg:cfm}, yielding a real-time policy that can be tuned by adjusting the input parameter $\gamma(k)$ without any online sampling.
 
 \subsection{Multi-step Safety Verification}
-
-Before we introduce our main algorithm, here we define the deterministic verifier function that ensures the trajectory respects multi-step safety. We named this polytope as \textit{verifier polytope} and separates the term with the nominal polytope \eqref{eq:poly}; it is constructed along the prediction horizon $H$ in the trajectory yielded by the generated action. 
+Before presenting Safe Flow Expansion to bridge the gap between generative policy and the SBPC, we define a deterministic verifier that tests whether a candidate action window admits a finite-horizon DCBF certificate, (\textit{i.e.,} multi-step safety).
 
 \noindent \textbf{Verifier Polytope for Expansion.}
-Concretely, let \(c=q_0\in\mathbb R^d\) denote the current robot position in the free space \(\mathcal{Q}\) and let
-\(\{q_t\}_{t=0}^{H}\) be a candidate local trajectory submitted to verifier, with
-\(p_t:=q_t-c\).  For a safety parameter \(\gamma\in(0,1]\), define
-\(\alpha_t=(1-\gamma)^t\) and \(\beta_t=1-\alpha_t\). We then formulate under each sensed circular obstacle that is represented as \(\mathcal O_i=\{x\in\mathbb R^d:\|x-o_i\|_2\le r_i\}\) where \(o_i\) and \(r_i\) are its center and radius. The nominal construction fixes each obstacle-face normal using the closest-point direction from the current robot position. This common orientation is required for the MPPI averaging argument, but it can reject a collision-free candidate that passes the obstacle along a different side. In contrast, the verifier evaluates one candidate trajectory at a time and therefore does not require a face shared across different candidates. We optimize both the orientation $\mathbf a_i$ and the margin $m_i$ so that the separating face is adapted to the geometry of the submitted trajectory while still excluding the entire obstacle. This candidate-dependent face can certify trajectories outside the nominal polytope without relaxing the finite-horizon DCBF decay condition. 
-For each sensed obstacle, we seek a face
-\[
-\mathbf a_i^\top(x-c)\le m_i,
-\]
-where $\mathbf a_i\in\mathbb R^d$ is the face normal and
-$m_i>0$ is its robot-centered margin.
+The nominal polytope in \eqref{eq:poly_safeset} is a convex inner approximation imposed on all nonzero-weight MPPI rollouts, thereby enabling the convexity-based averaging argument. In a nonconvex free space, however, a single shared region may exclude collision-free rollouts in other local modes, even if that region is enlarged~\cite{deits2015computing}. Therefore, to expand a generative policy into these unexplored safe modes, it is important to preserve the finite-horizon DCBF decay schedule while reducing conservatism of the convex inner approximation from the nominal polytope. Given an action window proposed by the generative policy, the verifier instead evaluates its induced rollout individually at the current receding-horizon step, allowing the separating faces to depend on the queried rollout. 
 
-The optimization problem is solved for each nearby obstacle within the sensing region:
+For a queried action window \(\hat{\mathbf u}\), let
+\(\{\xki\}_{i=0}^{H}\) denote its model rollout. For each sensed obstacle \(j\in\mathcal O(\xk)\), with center $\oj$ and radius
+\(r_j\), the verifier constructs a separating hyperplane \(\mathbf a_j^\top(\mathbf q-\qk)\le m_j,\)
+by solving the optimization problem
 \begin{equation}
 \begin{aligned}
-\max_{\ai, m_i}\ & m_i\\
-\text{s.t. }\ & \ai^\top(\mathbf{q}_t-c)\le\big(1-(1-\gamma)^t\big)m_i \quad (t=1,\dots,H),\\
-& r_i\|\ai\|_2\le \ai^\top(o_i-c)-m_i,\\
-&\|\ai\|_2\le1,\ m_i\ge m_{\min}.
+\max_{\aj, m_j}\ & m_j\\
+\text{s.t. }\ & \aj^\top(\qki-c)\le\big(1-(1-\gamma)^t\big)m_i \quad (i=0,\dots,H-1),\\
+& r_j\|\aj\|_2\le \aj^\top(\oj-c)-m_i,\\
+&\|\aj\|_2\le1,\ m_j\ge m_{\min}.
 \end{aligned}
 \label{eq:socp}
 \end{equation}
 % The objective is linear, the trajectory constraints are affine, and the obstacle-separation and normalization constraints are second-order-cone representable; hence the problem is an SOCP. 
-The first constraint is the multi-step safety specification
+Here, the first constraint is the multi-step safety specification
 \(h^{\text{poly}}(\xki;\xk)\geq \alpha_t\) and the second constraint is the separation since
-\(\min_{x\in\mathcal O_i}\ai^\top(x-c)
-=\ai^\top(o_i-c)-r_i\|\ai\|_2\). The third and fourth constraint is the normalization bound and for specifying minimum margin.
+
+% \(\min_{x\in\mathcal O_i}\ai^\top(x-c)
+% =\aj^\top(o_j-c_j)-r_j\|\aj\|_2\). 
+
+The third and fourth constraints are the normalization bound and the minimum margin specification, respectively.
 % {\color{red}MJ: Need more detailed explanation on this optimization problem.}
 After solving all per-obstacle faces, the verifier polytope has the form \footnote{In order to guarantee the bounded verifier polytope in the sensing region, we solve \eqref{eq:socp} for auxiliary obstacles that is tangent to the largest K-sided polytope; K = 16 is used.}
 \begin{equation}
 \mathcal P
 =
-\bigcap_i
-\{x:\ai^\top(x-c)\le m_i\},
+\bigcap_j
+\{x:\aj^\top(x-c_j)\le m_j\},
 \label{eq:verifierpolytope}
 \end{equation}
 % or equivalently \(Ax\le b\) with \(A_i=a_i^\top\) and
 % \(b_i=a_i^\top c+m_i\). 
-Having formulated the optimization problem for the existence of multi-step safety specification, we formally define the \textit{validity} of an arbitrary control policy.
+Having formulated the optimization problem for the existence of multi-step safety specification, we formally define the \textit{validity} of an arbitrary control policy. Here we abbreviate the \(H\) steps of predicted actions
+\(\hat{\mathbf u}_{k:k+H-1}\) as \(\hat{\mathbf u}\).
 \begin{definition}
 Let \(v_\gamma(\hat{\mathbf u};\xi) \in \{0, 1\}\) be a indicator function that returns \(1\) if the optimization problem~\eqref{eq:socp} is feasible for action \(\hat{\mathbf u}\) under context \(\xi\) and safety parameter \(\gamma\), and \(0\) otherwise. The \textit{valid action set} is defined as the action certified multi-step safety of~\eqref{eq:socp}
 \begin{equation}
@@ -580,11 +579,10 @@ Let \(v_\gamma(\hat{\mathbf u};\xi) \in \{0, 1\}\) be a indicator function that 
 \end{equation}
 and action \(\hat{\mathbf u} \in \Omega^\star(\xi,\gamma)\) is a \textit{valid} action that consequently  guarantees the existence of a verifier polytope~\eqref{eq:verifierpolytope}.
 \end{definition}
-Here we abbreviate the \(H\) steps of predicted actions
-\(\hat{\mathbf u}_{k:k+H-1}\) as \(\hat{\mathbf u}\).
+
 % {\color{red} MJ: The verifier is not defined. Should it also take the current state or observation as input, since it evaluates the validity of a sampled control policy in the current context?}
 
-\begin{proposition} \label{prop: 3} A stochastic policy $\mathbf{u}_{k:k+H-1\mid k}$ with length $H$ produced by MPPI-DCBF~\eqref{eq:mppi-dcbf} associated with safety parameter $\gamma$, which is the constrained stochastic optimization problem solution under the outward normal $n$ from \eqref{eq:aff_barrier}, is a valid multi-step sample, \textit{i.e.,} \(v_\gamma(\mathbf{u}_{k:k+H-1\mid k}) =1.\) Therefore, the nominal-polytope certificate induces a feasible face of the SOCP verifier.
+\begin{proposition} \label{prop: 3} A stochastic policy $\mathbf{u}_{k:k+H-1\mid k}$ with length $H$ produced by MPPI-DCBF~\eqref{eq:mppi-dcbf} associated with safety parameter $\gamma$, which is the constrained stochastic optimization problem solution under the outward normal $n$ from \eqref{eq:aff_barrier}, is a valid multi-step sample, \textit{i.e.,} \(v_\gamma(\mathbf{u}_{k:k+H-1\mid k};\xi) =1.\) Therefore, the nominal-polytope certificate induces a feasible face of the SOCP verifier.
 \end{proposition}
 
 % \begin{proposition}
@@ -814,7 +812,7 @@ Since the generative model learns a continuous mapping, it can interpolate betwe
 \note{Structure for each subsection: 1. Define data used for training, In-distribution and OOD, 2. Safe Flow Expansion, how we subsequently gather positive samples (execution strategy) }
 For simulation experiments, we evaluate our framework on 2D goal-reaching task in cluttered environments and a dynamic pedestrian simulator \cite{helbing1995social}. We used 2D double integrator dynamics for robot policy generation. The base CFM model uses a vanilla flow-matching velocity network of a single MLP with 3 hidden layers, conditioned on the input of (i) a 5-dimensional state (the relative goal position, the velocity, and the safety parameter $\gamma$), (ii) a 32-dim obstacle embedding that encodes a nominal polytope barrier function in discretized grids, and output predicted action sequences. The 32-dim penultimate representation at the flow time $s$ = 0.9 gives the flow representation for the uncertainty estimation. 
 
-For hardware experiments we extend the method to 3D path planning on a \textit{Crazyflie} quadrotor, again with double-integrator dynamics; the CFM is structured as above but conditions on a 10-dimensional state (the relative goal position, the velocity, and $\gamma$). Flights occupy a $3\times5\times7 \;m^3$  arena in which a \textit{Vicon} motion capture system streams pose at roughly $50$ Hz. The policy replans at $10$ Hz from the measured position and a finite-difference velocity, and the resulting acceleration is streamed at $100$ Hz as the feedforward term of a full-state setpoint whose position and velocity follow from integrating the double integrator one step. Obstacles are spheres and cylinders tracked live by the same system.
+For hardware experiments we extend the method to 3D path planning on a \textit{Crazyflie} quadrotor, again with double-integrator dynamics; the CFM is structured as above but conditions on a 10-dimensional state (the relative goal position, the velocity, and $\gamma$). Flights occupy a $3\times5\times7 \;m^3$  arena in which a \textit{Vicon} motion capture system streams pose at $50$ Hz. The policy replans at $10$ Hz from the measured position and a finite-difference velocity, and the resulting acceleration is streamed at $100$ Hz as the feedforward term of a full-state setpoint whose position and velocity follow from integrating the double integrator one step. Obstacles are spheres and cylinders tracked live by the same system.
 
 %, employing Adam with learning rate $1 \times 10^{-4}$, batch 64, and 4 inner steps. 
 \subsection{2D Cluttered Environment: Simulation}
