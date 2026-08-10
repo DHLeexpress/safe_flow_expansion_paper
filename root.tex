@@ -57,8 +57,9 @@
 % SAFER: SAfe Flow Expansion for Robotics \\ with Applications in Generative Motion Planning
 % }
 \title{\LARGE \bf
-SAFER: SAfe Flow Expansion in Robot Motion Planning \\ From Certified Sampling-based Predictive Control
+Safe Flow Expansion: Discovering Safe Robot Behaviors in Out-of-Distribution Motion Planning
 }
+% Need to mention MPPI-DCBF?
 \author{Albert Author$^{1}$ and Bernard D. Researcher$^{2}$}
 % \author{Dohyun Lee$^{1}$, Minhyuk Jang$^{2}$, David W. Wijk$^{1}$and Joel W. Burdick$^{1}$}
 
@@ -102,24 +103,24 @@ Recent works have encoded this concept through predictive safety filters, which 
     \label{fig:demo_rollouts}
 \end{figure}
 
-\begin{figure}[t]
-\hspace{-.2cm}
-\centering
-\begin{minipage}{0.215\textwidth}
-\centering
-\includegraphics[width=\linewidth]{images/demo_3d/cylinder_data.jpg}
-\end{minipage}
-\begin{minipage}{0.215\textwidth}
-\centering
-\includegraphics[width=\linewidth]{images/demo_3d/ball_rollouts_v0.jpg}
-\end{minipage}
-% \vspace{-2.5mm}
-\caption{
-% Simulation results of the safe quadrotor landing problem, comparing the standard bCBF (purple), the generalized bCBF (red), and the adaptive bCBF (blue).
-% All three approaches maintain safety (\textbf{a,$\nspace{2}$b,$\nspace{2}$c}) and obey the input constraints (\textbf{d},$\nspace{2}$\textbf{e}), yet differ in task performance. The bCBF is unable to reach the goal due to the terminal constraint, as the flows (dashed gray) must reach $\Cb$ (\textbf{a}). The \eqref{eq:gen-qp} also does not reach the goal, but achieves a much larger expansion of $\Cb$ than the \eqref{eq:bcbf-qp} (\textbf{b}). Using the adaptation law in \Cref{cor:adaptation_law}, the \eqref{eq:adaptive-qp} reaches the goal via superior expansion of $\Cb$ (\textbf{c}) by modifying the expansion controller gains (\textbf{f,$\nspace{2}$g}).
-}\label{fig:3d}
-\vskip - 6mm
-\end{figure}
+% \begin{figure}[t]
+% \hspace{-.2cm}
+% \centering
+% \begin{minipage}{0.215\textwidth}
+% \centering
+% \includegraphics[width=\linewidth]{images/demo_3d/cylinder_data.jpg}
+% \end{minipage}
+% \begin{minipage}{0.215\textwidth}
+% \centering
+% \includegraphics[width=\linewidth]{images/demo_3d/ball_rollouts_v0.jpg}
+% \end{minipage}
+% % \vspace{-2.5mm}
+% \caption{
+% % Simulation results of the safe quadrotor landing problem, comparing the standard bCBF (purple), the generalized bCBF (red), and the adaptive bCBF (blue).
+% % All three approaches maintain safety (\textbf{a,$\nspace{2}$b,$\nspace{2}$c}) and obey the input constraints (\textbf{d},$\nspace{2}$\textbf{e}), yet differ in task performance. The bCBF is unable to reach the goal due to the terminal constraint, as the flows (dashed gray) must reach $\Cb$ (\textbf{a}). The \eqref{eq:gen-qp} also does not reach the goal, but achieves a much larger expansion of $\Cb$ than the \eqref{eq:bcbf-qp} (\textbf{b}). Using the adaptation law in \Cref{cor:adaptation_law}, the \eqref{eq:adaptive-qp} reaches the goal via superior expansion of $\Cb$ (\textbf{c}) by modifying the expansion controller gains (\textbf{f,$\nspace{2}$g}).
+% }\label{fig:3d}
+% \vskip - 6mm
+% \end{figure}
 
 This computational burden motivates a shift from online constrained optimization to learning-based control, where complex planning is performed offline to curate datasets of safe, multi-modal behavior. Generative models, such as diffusion and flow matching, can synthesize motion trajectories from diverse, high-dimensional demonstrations \cite{kurtz2025generative, chi2023diffusion}. However, they do not natively provide formal safety guarantees during rollout. 
 Previous work attempts to encode safety by conditioning or regularizing generation \cite{dai2025safefm, carvalho2023mpdiffusion}, but deployments still lack mechanisms to systematically trade off safety and feasibility. This can be critical in real-world tasks where the robot must adjust caution to context. 
@@ -820,11 +821,46 @@ See Fig.~\ref{fig:2d_sfm}
 % %The policy is trained with the encoder frozen, employing AdamW with learning rate $2 \times 10^{-5}$, batch 64, and 4 inner steps.
 % Evaluation is done over 40 rollouts per $\gamma$, reporting success/collision rate, minimum clearance, and time-to-goal on successful rollouts.
 \subsection{3D Quadrotor: Hardware}
+{\color{blue}
+TODO: Add training details of the policy}
 
 
+\begin{figure*}[!t]
+\centering
+\begin{minipage}{0.495\textwidth}
+  \centering
+  \includegraphics[width=\linewidth]{images/demo_3d/ball_passage_pretrained.pdf}\\
+  {\small (a) Pretrained CFM policy}
+\end{minipage}
+\hfill
+\begin{minipage}{0.495\textwidth}
+  \centering
+  \includegraphics[width=\linewidth]{images/demo_3d/ball_passage_expanded.pdf}\\
+  {\small (b) After Safe Flow Expansion}
+\end{minipage}
+\caption{
+Eight hardware rollouts per policy at $\gamma\!=\!1.0$, flown between a common start and goal past the same spherical obstacle. The disc is the plane through the obstacle centre normal to the start--goal axis, divided into $45^\circ$ passage sectors; a sector is shaded
+when a rollout crosses it and each dot marks a measured crossing. }
+\label{fig:3d_passage}
+\end{figure*}
+
+Fig.~\ref{} shows the flight trajectories for the five pillar obstacles.
+
+Fig.~\ref{fig:3d_passage} shows the drone flight trajectories for the spherical obstacle.
+
+The pretrained policy reaches 2 of 8 sectors, confining every rollout on left side of the obstacle. After expansion the policy reaches 6 of 8.
+
+
+
+Computation time: MPPI a ms, pretrained b ms.
 \section{Conclusion}
 
 Future work: extend to the systems where expert demonstration is expensive or task / state space is too large.
+
+
+
+
+
 
 % This paper presented a framework for creating safety-tunable generative control policies for safety-critical tasks. We introduced a novel MPPI-DCBF planner that uses DCBFs to generate a rich dataset of provably safe multi-modal trajectories for linear systems. By training a conditional flow matching model on this data, we produced a real-time policy that can modulate its safety and feasibility via a single parameter at inference time, without the need for online sampling. Our experiments on 2D and 3D systems validate the approach, demonstrating a practical method for deploying safe, adaptable, and high-performance learned controllers.
 
