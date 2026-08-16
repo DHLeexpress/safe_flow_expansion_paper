@@ -809,6 +809,7 @@ Since the generative model learns a continuous mapping, it can interpolate betwe
 \end{figure}
 
 \section{Experiments and Discussion}
+
 \note{Structure for each subsection: 1. Define data used for training, In-distribution and OOD, 2. Safe Flow Expansion, how we subsequently gather positive samples (execution strategy) }
 For simulation experiments, we evaluate our framework on 2D goal-reaching task in cluttered environments and a dynamic pedestrian simulator \cite{helbing1995social}. We used 2D double integrator dynamics for robot policy generation. The base CFM model uses a vanilla flow-matching velocity network of a single MLP with 3 hidden layers, conditioned on the input of (i) a 5-dimensional state (the relative goal position, the velocity, and the safety parameter $\gamma$), (ii) a 32-dim obstacle embedding that encodes a nominal polytope barrier function in discretized grids, and output predicted action sequences. The 32-dim penultimate representation at the flow time $s$ = 0.9 gives the flow representation for the uncertainty estimation. 
 
