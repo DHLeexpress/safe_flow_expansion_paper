@@ -1,4 +1,123 @@
 
+% \begin{algorithm}[t]
+% \caption{Safe Flow Expansion}
+% \label{alg:sfe}
+% \small
+% \begin{algorithmic}[0]
+% \Require pretrained CFM $\theta_0$, verifier $v_\gamma$,
+% expansion rounds $N$, successful-rollout target $M$,
+% proposal batch size $K$, verification budget $B\leq K$,
+% execution cost $C$
+
+% \State $\mathcal B_0\gets\varnothing$
+% \For{$n=0,\ldots,N-1$}
+%     \State Fit uncertainty model $\sigma_n$ from $\mathcal B_n$
+%     \State $\mathcal D_n^{\mathrm{query}}\gets\varnothing$
+%     \State $\mathcal D_n^{\mathrm{train}}\gets\varnothing$
+%     \State $m\gets0$
+
+%     \While{$m<M$}
+%         \State Initialize a new closed-loop rollout
+%         \State $\mathcal E\gets\varnothing$
+%         \State $\mathrm{failed}\gets\mathrm{false}$
+
+%         \While{the rollout is not terminal and not $\mathrm{failed}$}
+%             \State Observe context $\xi_k=(\mathbf o_k,\gamma_k)$
+%             \State Draw proposals
+%             $\hat{\mathbf u}^{(1:K)}
+%             \sim p_1^{\theta_n}(\cdot\mid\xi_k)$
+
+%             \State $\mathcal A_k\gets
+%             \textsc{Acquire}_B
+%             \big(
+%             \hat{\mathbf u}^{(1:K)},\sigma_n,\phi_s
+%             \big)$
+
+%             \For{$j\in\mathcal A_k$}
+%                 \State $y_j\gets
+%                 v_{\gamma_k}(\xi_k,\hat{\mathbf u}^{(j)})$
+%                 \State $\mathcal D_n^{\mathrm{query}}
+%                 \gets
+%                 \mathcal D_n^{\mathrm{query}}
+%                 \cup
+%                 \{(\xi_k,\hat{\mathbf u}^{(j)},y_j)\}$
+%             \EndFor
+
+%             \State $\mathcal V_k\gets
+%             \{j\in\mathcal A_k:y_j=1\}$
+
+%             \If{$\mathcal V_k=\varnothing$}
+%                 \State $\mathrm{failed}\gets\mathrm{true}$
+%             \Else
+%                 \State $j^\star\gets
+%                 \arg\min_{j\in\mathcal V_k}
+%                 C(\xi_k,\hat{\mathbf u}^{(j)})$
+%                 \State Execute the first action of
+%                 $\hat{\mathbf u}^{(j^\star)}$
+%                 \State $\mathcal E\gets
+%                 \mathcal E\cup
+%                 \{(\xi_k,\hat{\mathbf u}^{(j^\star)})\}$
+%                 \State $k\gets k+1$
+%             \EndIf
+%         \EndWhile
+
+%         \If{the rollout reaches the goal successfully}
+%             \State $\mathcal D_n^{\mathrm{train}}
+%             \gets\mathcal D_n^{\mathrm{train}}\cup\mathcal E$
+%             \State $m\gets m+1$
+%         \EndIf
+%     \EndWhile
+
+%     \State $\mathcal B_{n+1}\gets
+%     \textsc{UpdateBuffer}
+%     (\mathcal B_n,\mathcal D_n^{\mathrm{query}})$
+%     \State $\theta_{n+1}\gets
+%     \textsc{UpdateCFM}
+%     (\theta_n,\mathcal D_n^{\mathrm{train}})$
+% \EndFor
+% \State \Return $\theta_N$
+% \end{algorithmic}
+% \end{algorithm}
+% \begin{algorithm}[t]
+% \caption{Safe Flow Expansion}
+% \label{alg:sfe}
+% \small
+% \begin{algorithmic}[0]
+% \Require pretrained CFM ${\theta_0}$, safety verifier $v_\gamma$, rounds $N$, batch $B$, execution cost $C$
+
+% \State $\mathcal D_0\gets\varnothing$, $\mathcal B_0\gets\varnothing$
+% \For{$n=0,\ldots,N-1$}
+%     \State Update uncertainty $\sigma_n$ from $\mathcal B_n$;
+%     \While{$\mathcal J_k^+ \neq \varnothing$}
+%         \State Context $\xi_k=(\mathbf o_k,\gamma_k)$
+%         \State Draw $\hat{\mathbf u}^{(1:K)} \sim p_1^{\theta_n}(\mathbf{\hat u}\mid \xi_k)\,\exp\!\Big(\sigma_n\big(\phi_s(\mathbf{\hat u})\big)/\beta\Big)/Z$
+        
+%         \State Query $y_j\gets
+%         v_\gamma(\xi_k,\hat{\mathbf u}^{(j)})$ 
+%         $\forall j\in\{1,\cdots,B\}$ 
+
+%         \State $\mathcal J_k^+\gets
+%         \{j\in\mathcal J_k:y_j=1\}$
+%         \State $j^\star\gets
+%         \arg\min_{j\in\mathcal J_k^+}
+%         C(\xi_k,\hat{\mathbf u}^{(j)})$
+%         \State Execute $\hat{\mathbf u}^{(j^\star)}$ and replan $k\gets k+1$
+%     \EndWhile
+%     \State $\mathcal D_{n+1}^{+}\gets
+%     \{(\xi,\hat{\mathbf u},1)\in\mathcal D_{n+1}\}$, $\mathcal D_{n+1}^{-}\gets
+%     \{(\xi,\hat{\mathbf u},0)\in\mathcal D_{n+1}\}$
+%     \State $\mathcal B_{n+1}\gets
+%     \textsc{UpdateBuffer}(\mathcal B_n,\mathcal D_{n+1}^{+})$
+%     \State $\theta_{n+1}\gets
+%     \textsc{UpdateCFM}(\theta_n,\mathcal D_{n+1}^{+},
+%     \mathcal D_{n+1}^{-})$
+% \EndFor
+% \State \Return \theta_{n}
+% \end{algorithmic}
+% \end{algorithm}
+
+
+
 % Concretely, let \(c=q_0\in\mathbb R^d\) denote the current robot position in the free space \(\mathcal{Q}\) and let
 % \(\{q_t\}_{t=0}^{H}\) be a candidate local trajectory submitted to verifier, with
 % \(p_t:=q_t-c\).  For a safety parameter \(\gamma\in(0,1]\), define

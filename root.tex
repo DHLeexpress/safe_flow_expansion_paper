@@ -21,10 +21,11 @@
 \usepackage{amsmath,amssymb}
 % \usepackage{amsthm}
 \usepackage{stfloats}
-\usepackage{algorithm}
+%\usepackage{algorithm}
 % \usepackage{algorithmic}
-\usepackage{algpseudocode}
+% \usepackage{algpseudocode}
 %\usepackage{algorithm2e}
+\usepackage[ruled,vlined]{algorithm2e}
 \usepackage{float}
 \graphicspath{{images/}}
 \newcommand{\piq}{\pi_q}
@@ -600,7 +601,7 @@ While Proposition~\ref{prop: 3} formally guarantees that the MPPI-DCBF planner a
 
 \noindent 
 \subsection{Safe Flow Expansion}
-We now turn our attention to acquiring missing safe behavioral modes for a conditional generative policy. Safe Flow Expansion enables this by first pretraining from that safe action support and increasing the probability mass on the same multi-step safe action windows.
+We now turn our attention to acquiring missing safe behavioral modes for a conditional generative policy. We introduce Safe Flow Expansion (Alg.~\ref{alg:sfe}) that enables this by first pretraining from that safe action support and increasing the probability mass on the same multi-step safe actions.
 
  This becomes problematic in OOD scenarios, where the model encounters states unseen during training. To address this distribution shift, recent large-scale imitation learning frameworks attempt to gather massive amounts of human intervention data to fill the coverage gaps \cite{}. However, data collection is inherently unscalable for capturing all possible safety-critical actions. To this end, we instead use the current generative policy to propose candidate action windows, query their validity with the deterministic verifier, and retrain on the resulting verified data~\cite{de2026active}. 
 
@@ -713,66 +714,89 @@ in~\eqref{eq:kernel-logistic-uncertainty}.
 % Equality holds if and only if \(q=\tilde p\) almost everywhere, which
 % proves the claim.
 % \end{proof}
-
-
-% \begin{algorithm}[H]
-% \caption{Safe Flow Expansion}
-% \label{alg:sfe}
-% \SetKwInOut{Input}{Input}\SetKwInOut{Output}{Output}
-% \Input{pretrained $\mu_{\theta_0}$, SOCP verifier $\tilde v$~\eqref{eq:socp}, rounds $T$, grid $\{\gamma\}$}
-% \Output{expanded $\mu_{\theta^\star}$ at peak certified coverage}
-% $\mathcal D_0\gets$ verified broad proposals\tcp*{seed distinct maneuvers}
-% \For{$t=0$ \KwTo $T-1$}{
-%   \tcc{Step 1: Trajectory generation}
-%   sample $x_{t+1}\sim p^{\theta_t}$ at raised temperature\;
-%   \tcc{Step 2: Geometric verification}
-%   $y_{t+1}\gets\tilde v(x_{t+1})$ (collision $\wedge$ goal $\wedge$ SOCP)\;
-%   $\mathcal D_{t+1}\gets\mathcal D_t\cup\{(x_{t+1},y_{t+1})\}$\;
-%   \tcc{Step 3: Policy bootstrapping}
-%   $\theta_{t+1}\gets\textsc{UpdateFlow}(\theta_t,\mathcal D_{t+1})$\;
-%   evaluate certified coverage; keep the peak round\;
-% }
-% \end{algorithm}
-
 \begin{algorithm}[t]
 \caption{Safe Flow Expansion}
 \label{alg:sfe}
 \small
-\begin{algorithmic}[0]
-\Require pretrained CFM ${\theta_0}$, safety verifier $v_\gamma$, rounds $N$, rollout stage $M$, batch $K$, execution cost $C$
+\DontPrintSemicolon
 
-\State $\mathcal D_0\gets\varnothing$, $\mathcal B_0\gets\varnothing$
-\For{$n=0,\ldots,N-1$}
-    \State Update uncertainty $\sigma_n$ from $\mathcal B_n$;
-    \While{$\mathcal I_k^+ \neq \varnothing$}
-        \State Context $\xi_k=(\mathbf o_k,\gamma_k)$
-        \State Draw $\hat{\mathbf u}^{(1:K)} \sim p_1^{\theta_n}(\mathbf{\hat u}\mid \xi_k)\,\exp\!\Big(\sigma_n\big(\phi_s(\mathbf{\hat u})\big)/\beta\Big)/Z$
-        
-        \State Query $y_j\gets
-        v_\gamma(\xi_k,\hat{\mathbf u}^{(j)})$ 
-        $\forall j\in\{1,\cdots,K\}$ 
+\KwIn{pretrained CFM $\theta_0$; verifier $v_\gamma$;
+      dynamics $f$; execution cost $C$, rounds $N$; parallel episodes $P$;
+      proposal and verification budgets $K\ge B$}
+\KwOut{expanded CFM $\theta_N$}
 
-        \State $\mathcal J_k^+\gets
-        \{j\in\mathcal J_k:y_j=1\}$
-        \State $j^\star\gets
-        \arg\max_{j\in\mathcal J_k^+}
-        C(\xi_k,\hat{\mathbf u}^{(j)})$
-        \State Execute $\hat{\mathbf u}^{(j^\star)}_{k\mid k}$ and replan $k\gets k+1$
-    \EndWhile
-    \State $\mathcal D_{n+1}^{+}\gets
-    \{(\xi,\hat{\mathbf u},1)\in\mathcal D_{n+1}\}$, $\mathcal D_{n+1}^{-}\gets
-    \{(\xi,\hat{\mathbf u},0)\in\mathcal D_{n+1}\}$
-    \State $\mathcal B_{n+1}\gets
-    \textsc{UpdateBuffer}(\mathcal B_n,\mathcal D_{n+1}^{+})$
-    \State $\theta_{n+1}\gets
-    \textsc{UpdateCFM}(\theta_n,\mathcal D_{n+1}^{+},
-    \mathcal D_{n+1}^{-})$
-\EndFor
-\State \Return $p_1^{\theta_{\hat n}}$
-\end{algorithmic}
+$\mathcal B_0\gets\varnothing$\;
+
+\For{$n\gets0$ \KwTo $N-1$}{
+    $\sigma_n\gets
+    \textsc{UpdateUncertainty}(\mathcal B_n)$\;
+
+    $\mathcal D_n\gets\varnothing$\;
+
+    \Repeat{$|\mathcal D_n|\ge P$}{
+        $\mathcal R_n\gets P$ parallel rollouts under $\theta_n$\;
+
+        \ForEach{replanning step $k$ in the active rollouts}{
+            Context $\xi_k=(\mathbf o_k,\gamma_k)$\;
+
+            Draw $B$ candidates from $K$ proposals:
+            \[
+            \hat{\mathbf u}^{(1:B)}
+            \sim
+            p_1^{\theta_n}
+            (\hat{\mathbf u}\mid\xi_k)
+            \exp\!\left(
+            \sigma_n(\phi_s(\hat{\mathbf u}))/ \beta
+            \right)/Z
+            \]
+
+            $y_j\gets
+            v_{\gamma_k}
+            (\xi_k,\hat{\mathbf u}^{(j)})$,
+            \quad $j=1,\ldots,B$\;
+
+            $\mathcal J_k^+\gets
+            \left\{
+            j\in\{1,\ldots,B\}:y_j=1
+            \right\}$\;
+
+            \If{$\mathcal J_k^+=\varnothing$}{
+                \textsc{RestartRollout}()
+            }
+
+            $j^\star\gets
+            \displaystyle
+            \arg\min_{j\in\mathcal J_k^+}
+            C(\xi_k,\hat{\mathbf u}^{(j)})$\;
+
+            $\mathbf u_k\gets
+            [\hat{\mathbf u}^{(j^\star)}]_0,
+            \;
+            \mathbf x_{k+1}\gets
+            f(\mathbf x_k,\mathbf u_k)$
+            \tcp*[h]{rollout}
+        }
+
+        $\mathcal D_n\gets
+        \mathcal D_n\cup
+        \left\{
+        \boldsymbol{\tau}\in\mathcal R_n:
+        \textsc{Success}(\boldsymbol{\tau})
+        \right\}$\;
+    }
+
+    $\mathcal B_{n+1}\gets
+    \textsc{UpdateBuffer}(\mathcal B_n,\mathcal D_n)$\;
+
+    $\theta_{n+1}\gets
+    \textsc{UpdateCFM}(\theta_n,\mathcal D_n)$\;
+}
+\Return{$\theta_N$}\;
 \end{algorithm}
 
-Algorithm~\ref{alg:sfe} implements data acquisition on verified actions under the evolving CFM policy. At each receding-horizon step, the current policy proposes uncertainty-tilted actions, and among those, the verifier \(v_{\gamma_k}\) is used to acquire safe actions. The data is collected in a receding-horizon manner, provided that \(\xi_k\) is a sufficient statistic for the system dynamics (\textit{i.e.,} input of the generative policy), this receding-horizon interaction induces a Markovian closed-loop sampling process. During the data acquisition, one can execute (the execution cost \(C\)) expert actions \cite{ross2011reduction} or restrict execution to a safe admissible action set \cite{alshiekh2018safe}. In our case, verifier validity remains enforced by restricting selection to \(\mathcal J_k^+\) and constructing this execution cost for efficient safe coverage remains an open question.
+At each replanning step $k$, SFE draws a finite batch from the current CFM policy using the verifier uncertainty. The verifier then deterministically separates the queried actions \(\hat{\mathbf u}^{(j)}\) into valid (\textit{i.e., \(j\in\mathcal J^+_k\)}) and invalid sets. The execution cost \(C\) here does not define validity; it only ranks verifier-positive candidates among the $B$ uncertain candidates, from which the minimum-cost first action is executed. During data acquisition, one can set this cost as expert actions \cite{ross2011reduction} or restrict execution to a safe admissible action set \cite{alshiekh2018safe}. In our case, constructing this execution cost for efficient acquisition of multi-step safe actions remains an open question. After gathering finite successful rollouts at each round, the executed action windows are admitted to the expansion dataset and balanced over the safety parameter and successful trajectories before the CFM update.
+
+A possible concern is that, because the buffer \(\mathcal B_n\) pools observations from finite contexts at each round, \(\sigma_n(\phi_s(\hat{\mathbf u}))\) may prioritize an action due to novelty in unrelated contexts. We use this uncertainty only as an acquisition heuristic, and every selected candidate is re-evaluated by \(v_\gamma(\xi_k,\hat{\mathbf u})\) under the current context, so context aggregation can affect query efficiency but not verifier-defined validity.
 
 \subsection{Adaptation law on safety parameter}
 Since the generative model learns a continuous mapping, it can interpolate between its distinct safe behaviors based on the conditioning safety parameter, $\gamma$. This enables the synthesis of novel control strategies by implementing a dynamic schedule for $\gamma(k)$ at inference time.
@@ -872,9 +896,11 @@ The pretrained policy reaches 2 of 8 sectors, confining every rollout on left si
 
 \begin{figure*}[t]
     \centering
-    \includegraphics[width=\textwidth]{images/demo_3d/fig_five_plain.pdf}
+    \includegraphics[width=\textwidth]{images/demo_3d/fig_six_nodcbf_bare.pdf}
+    \vspace{-5.0mm}
     \caption{Coverage studies}
-    \label{fig:five}
+    \vspace{-4.0mm}
+    \label{fig:six}
 \end{figure*}
 
 
