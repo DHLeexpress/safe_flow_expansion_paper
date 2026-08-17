@@ -83,7 +83,7 @@ We address both problems through a lens of discrete-time control barrier functio
     \centering
     \includegraphics[width=\linewidth]{images/sfe_v1.pdf}
     \vspace{-2.0mm}
-    \caption{(Overview of the proposed framework for safe robot behavior discovery: (A) MPPI-DCBF generates $\gamma$-conditioned certified demonstrations for generative policy training. (B) Starting from the pretrained CFM policy, Safe Flow Expansion repeatedly self-generates candidate behaviors, verifies them under finite-horizon DCBF conditions, and updates the policy to expand its safe generable set. (C) The expanded policy consequently discovers new safe trajectory modes in OOD environments that are poorly represented by the pretrained policy.}
+    \caption{(Overview of the proposed framework for safe robot behavior discovery: (A) MPPI-DCBF generates safety($\gamma$)-conditioned certified demonstrations for generative policy training. (B) Starting from the pretrained CFM policy, Safe Flow Expansion repeatedly self-generates candidate behaviors, verifies them under finite-horizon DCBF conditions, and updates the policy to expand its safe generable set. (C) The expanded policy consequently discovers new safe trajectory modes in OOD environments that are poorly represented by the pretrained policy.}
     \vspace{-5.0mm}
     \label{fig:hero}
 \end{figure}
@@ -217,7 +217,7 @@ Then the current optimal control $\mathbf{u}^*_{k\mid k}$ is applied.
 % & h^{\mathrm{aff}}\!\left(x_{k+i\mid k};\,x_{k\mid k}\right)\ \ge\ (1-\gamma)^i,\quad i=0,\dots,N. \tag{1d}\label{eq:safemppi}
 This parallelizable sampling process makes MPPI highly suitable for solving non-convex optimal control problems on modern GPU hardware. However, a key challenge arises in safety-critical applications. When obstacles are present, a cost for avoiding obstacles does not provide formal safety guarantees, as the final control is averaged over many trajectories. 
 
-Several works have focused on incorporating safety into the forward sampling process. Approaches that shape the rollout distribution or impose barrier constraints \cite{yin2022,yin2023shield} bias the sampling toward safety, but often lack a safety certificate. Conversely, methods that act as sampling-based safety filters by greedily selecting safe samples \cite{rabiee2024guaranteed} enforce safety but bypass the averaging process in \eqref{eq:mppi-update}, thereby sacrificing the optimality certificate.
+Several works have focused on incorporating safety into the forward sampling process. Approaches that shape the rollout distribution or impose barrier constraints to bias the sampling toward safety \cite{yin2022,yin2023shield} , but often lack a safety certificate. Conversely, methods that act as sampling-based safety filters by greedily selecting safe samples \cite{rabiee2024guaranteed} enforce safety but bypass the averaging process in \eqref{eq:mppi-update}, thereby sacrificing the optimality certificate.
 
 \subsection{Conditional Flow Matching for trajectory generation}
 Conditional Flow matching is increasingly used in robotics for trajectory generation and policy generation \cite{kurtz2025generative,mizuta2025unified}. The trajectory generation process learns a mapping from noise to entire collision-free trajectories by end-to-end supervised learning, but it can struggle to generalize to out-of-distribution environments and may require complete retraining \cite{ye2024efficient, dai2025safefm}. 
@@ -584,16 +584,17 @@ While Proposition~\ref{prop: 3} formally guarantees that the MPPI-DCBF planner a
     \centering
     \includegraphics[width=\linewidth]{images/demo_2d_cluttered/cluttered_legend.pdf}
     \end{minipage}
-    \begin{minipage}{0.45\textwidth}
+    \begin{minipage}{0.23\textwidth}
     \centering
-    \includegraphics[width=\linewidth]{images/demo_2d_cluttered/cluttered_curve_v0.pdf}
+    \includegraphics[width=\linewidth]{images/demo_2d_cluttered/cluttered_curve_v1.pdf}
     \end{minipage}
-    \begin{minipage}{0.45\textwidth}
+    \begin{minipage}{0.23\textwidth}
     \centering
-    \includegraphics[width=\linewidth]{images/demo_3d/ball_curve.pdf}
+    \includegraphics[width=\linewidth]{images/demo_3d/ball_curve_v1.pdf}
     \end{minipage}
-    \vspace{-2.5mm}
-    \caption{2D cluttered environment quantitative comparison of safe flow expansion round counts versus collision rate, validity, minimum clearance, and time-to-goal. Safe flow expansion decreases trajectory-wise collision rate (25\%  to 0.1\%), increases validity (30\% to 85\%). Shaded regions show 95\% confidence intervals: Wilson intervals for collision rate and validity, and mean $\pm 1.96$ standard errors for minimum clearance and time-to-goal.}
+    \vspace{-1.0mm}
+    \caption{2D cluttered environment quantitative comparison of safe flow expansion round counts versus collision rate, validity, minimum clearance, and time-to-goal. Shaded regions show 95\% confidence intervals.}
+    %: Wilson intervals for collision rate and validity, and mean $\pm 1.96$ standard errors for minimum clearance and time-to-goal.}
     \label{fig:2d_cluttered}
 \end{figure}
 
@@ -771,30 +772,7 @@ in~\eqref{eq:kernel-logistic-uncertainty}.
 \end{algorithmic}
 \end{algorithm}
 
-Algorithm~\ref{alg:sfe} implements data acquisition on verified actions under the evolving CFM policy. At each receding-horizon step, the current policy proposes uncertainty-tilted actions, and among those, the verifier \(v_{\gamma_k}\) is used to acquire safe actions. The data is collected in a receding-horizon manner, provided that \(\xi_k\) is a sufficient statistic for the system dynamics (\textit{i.e.,} input of the generative policy), this receding-horizon interaction induces a Markovian closed-loop sampling process. During the data acquisition, one can execute (the execution cost \(C\)) expert actions \cite{ross2011reduction} or restrict execution to a safe admissible action set \cite{alshiekh2018safe}. In our case, verifier validity remains enforced by restricting selection to \(\mathcal J_k^+\) and constructing this execution cost for efficient safe coverage remains an open question. 
-
-
-\noindent \textbf{Baseline method} We compared against with CFM-MPPI~\cite{mizuta2025unified}, which combines reward-guided flow generation with sampling-based MPPI refinement. Given a base pre-trained vector field $\mathbf{v}^{\theta_{\text{0}}}(\mathbf{x}\!\mid\! \mathbf{o},\gamma)$, the guided velocity field is the local gradient ascent of the combined reward:
-\begin{equation}
-   \tilde{\mathbf{v}}^{\theta_{\text{0}}}(\mathbf{x}_\tau\!\mid\! \mathbf{o},\gamma)  = \mathbf{v}^{\theta_{\text{0}}}(\mathbf{x}_\tau\!\mid\! \mathbf{o},\gamma) \;+\; \eta \nabla_{\mathbf{z}_1}R(\mathbf{x},\mathbf{z}_1),
-   \label{eq:cfm-mppi_vectorfield}
-\end{equation}
-where $\mathbf{\hat u} =\mathbf{z}_1 \sim p_1^{\theta_{\mathrm{0}}}(\cdot\mid\mathbf
-o,\gamma)$ By integrating over $\tau$ from 0 to 1, the guided policy locally increases the reward that is designed to encourage both performance and safety
-\begin{equation}
-    R(\mathbf{x},\mathbf{\hat u}) = \sum_{k=0}^{H-1} w_\text{s} r_\text{s}(\mathbf{x},\mathbf{\hat u}) + w_\text{g} r_\text{g} (\mathbf{x},\mathbf{\hat u}), 
-    \label{eq:cfm-mppi_guidance}
-\end{equation}
-where $w_\text{s}, w_\text{g}$ are scalar weights. The safety reward term $r_\text{s}(\mathbf{x},\mathbf{\hat u})$ is defined to discourage the CBF condition, such as in \cite[Eq. 6]{mizuta2025unified}. While can be set arbitrarily, we set the performance reward term $r_\text{g}(\mathbf{x},\mathbf{\hat u})$ to be the same cost of the MPPI-DCBF expert \eqref{eq:mppicost}. In our simulation studies, we evaluated various combinations of the scalar weights and selected the pair that provided the best trade-off between safety (collision rate) and task performance (time-to-goal).
-
-At every receding-horizon step, CFM-MPPI generates 200 guided control
-sequences of horizon $H=10$ from the pretrained model. The ten sequences
-with the lowest MPPI cost are retained, and each is perturbed 200
-times with Gaussian noise. MPPI cost-weighted averaging produces ten
-refined sequences, from which the minimum-cost sequence is selected and
-its first action is executed. At the next state, the selected sequence is
-shifted by one step and used as a warm-start at the flow time $\tau = 0.75$ to generate the
-next guided generation and refinement step.
+Algorithm~\ref{alg:sfe} implements data acquisition on verified actions under the evolving CFM policy. At each receding-horizon step, the current policy proposes uncertainty-tilted actions, and among those, the verifier \(v_{\gamma_k}\) is used to acquire safe actions. The data is collected in a receding-horizon manner, provided that \(\xi_k\) is a sufficient statistic for the system dynamics (\textit{i.e.,} input of the generative policy), this receding-horizon interaction induces a Markovian closed-loop sampling process. During the data acquisition, one can execute (the execution cost \(C\)) expert actions \cite{ross2011reduction} or restrict execution to a safe admissible action set \cite{alshiekh2018safe}. In our case, verifier validity remains enforced by restricting selection to \(\mathcal J_k^+\) and constructing this execution cost for efficient safe coverage remains an open question.
 
 \subsection{Adaptation law on safety parameter}
 Since the generative model learns a continuous mapping, it can interpolate between its distinct safe behaviors based on the conditioning safety parameter, $\gamma$. This enables the synthesis of novel control strategies by implementing a dynamic schedule for $\gamma(k)$ at inference time.
@@ -808,23 +786,55 @@ Since the generative model learns a continuous mapping, it can interpolate betwe
 \end{figure}
 
 \section{Experiments and Discussion}
-\textbf{Train and test data details} For simulation experiments, we evaluate our framework on 2D goal-reaching task in cluttered environments and a dynamic pedestrian simulator \cite{helbing1995social}, as shown in Fig.~\ref{fig:2d_cluttered} and ~\ref{fig:2d_sfm}. 
+\textbf{Train and test data details} 
+We used 2D and 3D double integrator dynamics for robot policy generation. To generate a dataset for policy learning, we employ our proposed MPPI-DCBF planner in distribution with a sampling time of $\Delta t = 0.1s$. We employ Safe Flow Expansion in out-of-distribution to collect and evaluate distribution shift while keeping the start, goal, and robot dynamics fixed.
 
-\textbf{CFM model details} We used 2D double integrator dynamics for robot policy generation. The base CFM model uses a vanilla flow-matching velocity network of a single MLP with 3 hidden layers, conditioned on the input of (i) the relative goal position, the velocity, and the safety parameter $\gamma$, (ii) an obstacle embedding that encodes a nominal polytope barrier function in discretized grids, and output predicted action sequences. 
+For simulation experiments, we evaluate our framework on 2D goal-reaching task in (i) cluttered environments as shown in Fig.~\ref{fig:2d_cluttered} and (ii) a dynamic pedestrian simulator \cite{helbing1995social} as shown in Fig.~\ref{fig:2d_sfm}. 
+For cluttered environments, the robot starts at \((0.3,0.3)\) and navigates toward the fixed goal at \((4.7,4.7)\) in a \(5\,\mathrm{m}\times5\,\mathrm{m}\) workspace. Pretraining is performed in the nominal cluttered environment containing regularly sized circular obstacles, where we evaluate replacing the central obstacles with a previously unseen large obstacle.
+For dynamic environments, 
+The safety parameter is evaluated over \(\gamma\in\{0.1,0.2,0.3,0.4,0.5,0.7,1.0\}\).
 
-\textbf{Safe Flow Expansion details} Safe Flow Expansion self-generates actions via importance sampling (Eq.~\ref{eq:importancesampling}) using verifier uncertainty and execute the first action that minimizes the cost (\textit{e.g.,} canonical MPPI cost~\ref{eq:mppicost}). We used a Gaussian process with an RBF kernel and 32-dim penultimate representation at the flow time $s$ = 0.9 for the uncertainty estimation. The verifier is the finite horizon DCBF conditions in Def.~\ref{def:verifier}. A valid action is collected within successful trajectories, and the buffer represents randomly sampled valid action throughout the successful trajectory and the safety parameter for uncertainty estimation.
+For hardware experiments, we further deploy online 3D motion planning on a \textit{Crazyflie} quadrotor, and we evaluate on (iii) single-sphere as shown in Fig.~\ref{fig:hero} and (iv) multi-sphere configurations as shown in Fig.~\ref{fig:five}. The robot starts at \((0.3,0.3,)\) and navigates toward the fixed goal at \((4.7,4.7,)\) in a \(5\,\mathrm{m}\times5\,\mathrm{m}\) workspace. Pretraining is performed in the environments consists of 4-8 randomly positioned cylinder obstacles. 
+Flights occupy a $3\times5\times7 \;m^3$  arena in which a \textit{Vicon} motion capture system streams pose at $50$ Hz. The policy replans at $10$ Hz from the measured position and a finite-difference velocity, and the resulting acceleration is streamed at $100$ Hz as the feedforward term of a full-state setpoint whose position and velocity follow from integrating the double integrator one step. Obstacles are spheres and cylinders tracked live by the same system.
+The safety parameter is evaluated over \(\gamma\in\{0.1,0.3,0.5,1.0\}\).
 
-For hardware experiments we extend the method to 3D motion planning on a \textit{Crazyflie} quadrotor, again with double-integrator dynamics; the CFM is structured as above but conditions on a 10-dimensional state (the relative goal position, the velocity, and $\gamma$). Flights occupy a $3\times5\times7 \;m^3$  arena in which a \textit{Vicon} motion capture system streams pose at $50$ Hz. The policy replans at $10$ Hz from the measured position and a finite-difference velocity, and the resulting acceleration is streamed at $100$ Hz as the feedforward term of a full-state setpoint whose position and velocity follow from integrating the double integrator one step. Obstacles are spheres and cylinders tracked live by the same system.
+\textbf{CFM model details} The base CFM model uses a vanilla flow-matching velocity network of a single MLP with 3 hidden layers, conditioned on the input of the relative goal position, the velocity, and the safety parameter $\gamma$, a visual embedding that encodes information a nominal polytope barrier function in discretized grids within a sensing range of \(2\mathrm{m}\).
 
+At every receding-horizon steps, our CFM model generates a single control sequences of horizon $H=10$ from the expanded model. 
+
+\textbf{Safe Flow Expansion details} Safe Flow Expansion self-generates actions via importance sampling (Eq.~\ref{eq:importancesampling}) using verifier uncertainty and execute the first action selected by the prescribed execution cost (\textit{e.g.,} MPPI cost~\ref{eq:mppicost}). We used a Gaussian process with an RBF kernel and 32-dim penultimate representation at the flow time $s$ = 0.9 for the uncertainty estimation. The verifier is the finite horizon DCBF conditions as defined in Def.~\ref{def:verifier}. 
+At each expansion round, valid actions are collected within successful trajectories, and the buffer for uncertainty estimation collects i.i.d sampled valid action throughout the successful trajectory and the safety parameter. 
+
+\noindent \textbf{Baseline method} We compared against with CFM-MPPI~\cite{mizuta2025unified}, which combines reward-guided flow generation with sampling-based MPPI refinement. Given a base pre-trained vector field $\mathbf{v}^{\theta_{\text{0}}}(\mathbf{x}\!\mid\! \mathbf{o},\gamma)$, the guided velocity field is the local gradient ascent of the combined reward:
+\begin{equation}
+   \tilde{\mathbf{v}}^{\theta_{\text{0}}}(\mathbf{x}_\tau\!\mid\! \mathbf{o},\gamma)  = \mathbf{v}^{\theta_{\text{0}}}(\mathbf{x}_\tau\!\mid\! \mathbf{o},\gamma) \;+\; \eta \nabla_{\mathbf{z}_1}R(\mathbf{x},\mathbf{z}_1),
+   \label{eq:cfm-mppi_vectorfield}
+\end{equation}
+where $\mathbf{\hat u} =\mathbf{z}_1 \sim p_1^{\theta_{\mathrm{0}}}(\cdot\mid\mathbf
+o,\gamma)$ By integrating over $\tau$ from 0 to 1, the guided policy locally increases the reward that is designed to encourage both performance and safety
+\begin{equation}
+    R(\mathbf{x},\mathbf{\hat u}) = \sum_{k=0}^{H-1} w_\text{s} r_\text{s}(\mathbf{x},\mathbf{\hat u}) + w_\text{g} r_\text{g} (\mathbf{x},\mathbf{\hat u}), 
+    \label{eq:cfm-mppi_guidance}
+\end{equation}
+where $w_\text{s}, w_\text{g}$ are scalar weights. The safety reward term $r_\text{s}(\mathbf{x},\mathbf{\hat u})$ is defined to discourage the CBF condition, such as in \cite[Eq. 6]{mizuta2025unified}. While can be set arbitrarily, we set the performance reward term $r_\text{g}(\mathbf{x},\mathbf{\hat u})$ to be the same cost of the prescribed execution cost for the expansion. In our simulation studies, we evaluated various combinations of the scalar weights and selected the pair that provided the best trade-off between safety (collision rate) and task performance (time-to-goal).
+
+At every receding-horizon step, CFM-MPPI generates 200 guided control
+sequences from the pretrained model. The ten sequences
+with the lowest MPPI cost are retained, and each is perturbed 200
+times with Gaussian noise. MPPI cost-weighted averaging produces ten
+refined sequences, from which the minimum-cost sequence is selected and
+its first action is executed. At the next state, the selected sequence is
+shifted by one step and used as a warm-start at the flow time $\tau = 0.75$ to generate the next guided generation and refinement step.
+ 
 %, employing Adam with learning rate $1 \times 10^{-4}$, batch 64, and 4 inner steps. 
 \subsection{2D Cluttered Environment: Simulation}
 
-The model is pre-trained on SafeMPPI expert demonstrations from a random initial position to a fixed goal position, 200k of window length of $H$ as shown in~\ref{fig:demo_rollouts}
-
+% The model is pre-trained on SafeMPPI expert demonstrations from a random initial position to a fixed goal position, 200k of window length of $H$ as shown in~\ref{fig:demo_rollouts}
 For baseline method, we decompose the guidance in
-\eqref{eq:cfm-mppi_vectorfield}--\eqref{eq:cfm-mppi_guidance} into its performance and safety components. The arrows in Fig.~\ref{fig:demo_rollouts}(c,d) show the normalized finite-difference effects on the predicted robot state after guided generation on both components. 
+\eqref{eq:cfm-mppi_vectorfield}--\eqref{eq:cfm-mppi_guidance} into its performance and safety components. The arrows in Fig.~\ref{fig:demo_rollouts}(c,d) show the normalized finite-difference effects on the predicted robot state after guided generation on both components.
 \subsection{2D Pedestrian Model: Simulation}
-See Fig.~\ref{fig:2d_sfm}
+
+Our approach achieves improved safety and performance despite the fact that we generates single action at each replanning step rather than using larger candidate generative priors. This improved closed-loop result indicates that the generative distribution itself has shifted toward safe and goal-reaching actions since the policy must assign high probability to verified behavior, specifically where relying solely on the guidance cannot provide the informed policy. See Fig.~\ref{fig:2d_sfm}
 
 % We run our expansion algorithm for 100 iterations, and each iteration self-generates 14 closed-loop rollouts split uniformly over the 7 safety levels $\gamma \in $\{0.1, 0.2, 0.3, 0.4, 0.5, 0.7, 1.0\}. The verifier tests multi-step safety additionally with goal progress and collects valid executed actions of the same length of $10$,. 
 % For uncertainty estimation for valid samples, we used a Gaussian process with an RBF kernel with lengthscale 0.2, flow representation timestep s = 0.9, and temperature $\beta$ = 0.2. 
