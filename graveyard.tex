@@ -1,4 +1,78 @@
 
+% While the proper design of terminal ingredients (\textit{i.e.,} a terminal set and cost) can formally guarantee recursive feasibility in traditional MPC, the non-convex nature of the resulting optimization problem often makes real-time implementation computationally intractable \cite{rawlings2020model}. SBPC methods such as MPPI face similar challenges. Rather than proving recursive feasibility, our approach ensures safety by enforcing DCBF constraints at each time step, which relies on the weaker but more practical condition of pointwise feasibility, formalized in the following assumption.
+% \begin{assumption}  \label{assumption_1}
+%     For the discrete-time control affine system \eqref{eq:affinesystem} and for any initial state $x_{k|k} \in \mathcal{C}_i^\mathrm{aff}$, there exists at least one control sequence $\{u_{k+i|k}\}_{i=0}^{N-1}$ such that the resulting trajectory $\{x_{k+i|k}\}_{i=1}^{N}$ lies within the sequence of safe sets defined in \eqref{eq:aff_safeset}, i.e., $x_{k+i|k} \in \mathcal{C}_i^{\mathrm{aff}}$ for all $i \in \{1, \dots, N\}$.
+% \end{assumption}
+
+% Assumption 1 is the condition for pointwise feasibility of the MPPI-DCBF algorithm at the current state; it ensures that the set of valid trajectories for the planner to find is non-empty. It is important to note that the parameter $\gamma$ governs the trade-off between safety and feasibility. Although we assume there exists a valid trajectory, a smaller $\gamma$ yields more conservative (safer) behavior, but results in a smaller safe set \eqref{eq:aff_safeset}. Conversely, a larger $\gamma$ expands the safe set, making it easier to find a valid trajectory, but may result in safety violations in practice if modeling assumptions are violated. 
+
+% Under the assumption of pointwise feasibility, we can formally analyze the properties of the MPPI-DCBF averaging process.
+
+% \begin{proposition} \label{prop: 1}
+%     For the discrete-time control affine system \eqref{eq:affinesystem}, if all contributing rollouts $(m)$ satisfy $x^{(m)}_{k+1\mid k} \in \mathcal{C}_1^{\mathrm{aff}}$, then the averaged state $x^*_{k+1|k}$ under the MPPI-DCBF control is also guaranteed to be in the safe set, \textit{i.e.,} $x^*_{k+1|k} \in \mathcal{C}_1^{\mathrm{aff}}$.
+    
+%     \begin{proof}
+%     Under the control affine dynamics, the state $x^{(m)}_{k+1\mid k}$ in the next time step is an affine function of the control inputs. Since the admissible inputs are a convex polytope and the control update of MPPI is a convex combination of control perturbations~\eqref{eq:mppi-update}, the resulting state $x^*_{k+1\mid k}$ is a convex combination of the rollout states:
+%     \begin{align}
+%     x^*_{k+1|k} = \sum_m \hat{\omega}_m x^{(m)}_{k+1|k}, \nonumber
+%     \end{align}
+%     where $\hat{\omega}_m \in \mathbb{R}_{> 0}$ and $\sum_m \hat{\omega}_m = 1$ are the importance weights derived from \eqref{eq:mppi-weights} after the rejection of unsafe samples. Moreover, since the safe set $\mathcal{C}_1^{\mathrm{aff}}$ is a convex half-space, any convex combination of points within it must also lie within the set. Thus, if $x^{(m)}_{k+1\mid k} \in \mathcal{C}_1^{\mathrm{aff}}$ for all $m$, it follows that $x^*_{k+1|k} \in \mathcal{C}_1^{\mathrm{aff}}$.
+%     \end{proof}
+% \end{proposition}
+% \vspace{1mm}
+% \noindent\textbf{Proposition 1.} \textit{For the discrete-time control affine system \eqref{eq:affinesystem}, with the convex set of admissible inputs, if all contributing rollouts $(m)$ satisfy $x^{(m)}_{k+1\mid k} \in \mathcal{C}_1^{\mathrm{aff}}$, then the resulting state $x^*_{k+1|k}$ under the MPPI-DCBF control is also guaranteed to be in the safe set, i.e., $x^*_{k+1|k} \in \mathcal{C}_1^{\mathrm{aff}}$.}
+
+% \vspace{1mm}
+% \begin{proof}
+% Under the control affine dynamics, the state $x^{(m)}_{k+1\mid k}$ in the next time step is an affine function of the control inputs. Since the admissible inputs are convex and the control update of MPPI is a convex combination of control perturbations~\eqref{eq:mppi-update}, the resulting state $x^*_{k+1\mid k}$ is a convex combination of the rollout states:
+% \begin{align}
+% x^*_{k+1|k} = \sum_m \hat{\omega}_m x^{(m)}_{k+1|k}, \nonumber
+% \end{align}
+% where $\hat{\omega}_m \ge 0$ and $\sum_m \hat{\omega}_m = 1$ are the importance weights derived from \eqref{eq:mppi-weights} after the rejection of unsafe samples. Moreover, since the safe set $\mathcal{C}_1^{\mathrm{aff}}$ is a convex half-space, any convex combination of points within it must also lie within the set. Thus, if $x^{(m)}_{k+1\mid k} \in \mathcal{C}_1^{\mathrm{aff}}$ for all $m$, it follows that $x^*_{k+1|k} \in \mathcal{C}_1^{\mathrm{aff}}$.
+% \end{proof}
+% \vspace{1mm}
+
+% If the dynamics of the system of interest are linear time invariant (LTI) as
+% \begin{equation}
+%     x_{k+1}=Ax_k + Bu_k,\label{eq:lti}
+% \end{equation}
+% then we can make a similar statement about safety along the \textit{entire} trajectory, rather than just a single step in the MPPI averaging process.
+
+% \begin{proposition} \label{prop:2}
+% For the discrete LTI system \eqref{eq:lti} under Assumption~\ref{assumption_1}, if all contributing rollouts $(m)$ satisfy $x^{(m)}_{k+i\mid k} \in \mathcal{C}_i^{\mathrm{aff}}$ for all steps $i \in \{1, \dots, N\}$, then the entire averaged MPPI trajectory also remains within the sequence of safe sets, \textit{i.e.,} $x^*_{k+i\mid k} \in \mathcal{C}_i^{\mathrm{aff}}$ for all $i$.
+
+% \begin{proof}
+%     The proof extends the logic from \Cref{prop: 1} to the full horizon. For an LTI system, the state at any future step $i$ is an affine function of the control sequence:
+%     \begin{align*}
+%         x_{k+i}=A^{i}x_k + \sum^{i-1}_{j=0}A^{i-1-j}Bu_{k+j}.
+%     \end{align*}
+%     Thus, the averaged state is a convex combination of the individual rollout states at that same step:
+%     \begin{align}
+%     x^*_{k+i|k} = \sum_m \hat{\omega}_m x^{(m)}_{k+i|k}, \quad \forall i \in \{1, \dots, N\}, \nonumber
+%     \end{align}
+%     where $\hat{\omega}_m$ are the normalized importance weights. Because $\forall i \in \{1, \dots, N\}$, $x^{(m)}_{k+i\mid k}\in\mathcal{C}_i^{\mathrm{aff}}$ and $\mathcal{C}_i^{\mathrm{aff}}$ is a convex set, the convex combination, $x^*_{k+i|k}$, must also lie within $\mathcal{C}_i^{\mathrm{aff}}$. 
+%     % As this holds for all steps $i$, the entire averaged trajectory is guaranteed to be safe.
+% \end{proof}
+% \end{proposition}
+% %
+% % \noindent\textbf{Proposition 2.} \textit{For the discrete LTI system \eqref{eq:lti}, \textbf{under Assumption 1}, if all contributing rollouts $(m)$ satisfy $x^{(m)}_{k+i\mid k} \in \mathcal{C}_i^{\mathrm{aff}}$ for all steps $i \in \{1, \dots, N\}$, then the entire averaged MPPI trajectory also remains within the sequence of safe sets, i.e., $x^*_{k+i\mid k} \in \mathcal{C}_i^{\mathrm{aff}}$ for all $i$.}
+% %
+% % \vspace{1mm}
+% % \begin{proof}
+% % The proof extends the logic from Proposition 1 to the full horizon. For an LTI system, the state at any future step $i$ is an affine function of the control sequence. This implies that the averaged state is a convex combination of the individual rollout states at that same step:
+% % \begin{align}
+% % x^*_{k+i|k} = \sum_m \hat{\omega}_m x^{(m)}_{k+i|k}, \quad \forall i \in \{1, \dots, N\}, \nonumber
+% % \end{align}
+% % where $\hat{\omega}_m$ are the normalized importance weights. By the proposition's premise, every rollout state $x^{(m)}_{k+i\mid k}$ is in the safe set $\mathcal{C}_i^{\mathrm{aff}}$. Since each $\mathcal{C}_i^{\mathrm{aff}}$ is a convex set, their convex combination, $x^*_{k+i|k}$, must also lie within that set. As this holds for all steps $i$, the entire averaged trajectory is guaranteed to be safe.
+% % \end{proof}
+% % \vspace{1mm}
+
+% \Cref{prop:2} holds to ensure the full-horizon safety of the averaged plan as illustrated in Fig.~\ref{fig:keystone}(d). Despite the fact that only the current optimal control $u^*_{k\mid k}$ is applied, the full-horizon safety of the optimal control sequence is critical for the subsequent step. The remaining portion of the safe trajectory provides a warm start for the next optimization, anchoring the sampling distribution in a safe region of the state space. Our approach in leveraging DCBFs in a model predictive fashion draws a parallel to optimization-based methods, such as MPC-CBF~\cite{zeng2021safety}.
+
+% \subsection{Conditional Flow Matching for Safety-tunable Policy Generation}
+
+% To generate a policy that can modulate its behavior in real time, we train a generative model on the dataset from our MPPI-DCBF planner. As shown in Fig.~\ref{fig:keystone}(b), our model consists of a sequential encoder and a contextual conditional flow matching (CFM) head. The encoder, a gated recurrent unit (GRU), processes a history of states, observations, and controls to produce a context vector $c_t$. This context allows the model to capture long-term dependencies, which is critical for resolving ambiguities such as deciding which side of an obstacle to navigate around (see Fig.~\ref{fig:flowmatching}). The CFM head then learns a vector field conditioned on this context, the current state and observation, together denoted by $o_t$, and the desired safety level $\gamma_t$ to produce the ground truth control action $u^*_{t\mid t}$ by minimizing the conditional flow matching loss in \eqref{eq:cfm_cost}. The complete training and inference procedure is detailed in Algorithm~\ref{alg:cfm}, yielding a real-time policy that can be tuned by adjusting the input parameter $\gamma(k)$ without any online sampling.
+
 % \begin{algorithm}[t]
 % \caption{Safe Flow Expansion}
 % \label{alg:sfe}

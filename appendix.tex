@@ -284,3 +284,44 @@ and is therefore multi-step safe.
 \begin{corollary}
     Given the same $\xi$, the probability bound~\eqref{eq:safe-action-hit-probability} given by the valid action set $\Omega^\star(\xi,\gamma)$ is monotonically {\color{blue} increasing in the sampling budget $K$ and in the reachable safe volume $m_\gamma(\xi)$, so both a larger parallel budget and a further expansion round can only improve it.}
 \end{corollary}
+
+% When the pre-trained policy represents only a few dominant modes, its
+% generable set may cover only a small portion of the certified set,
+% \begin{equation}
+%     \operatorname{Vol}\!\left(
+%     \Omega_{\theta_0}^{\tau}(\xi,\gamma)
+%     \right)
+%     \ll
+%     \operatorname{Vol}\!\left(\Omega^\star(\xi,\gamma)\right).
+% \end{equation}
+
+% For a fixed target context, the verifier-positive support gap targeted
+% by expansion is therefore
+% \[
+% \Omega^\star(\xi,\gamma)
+% \setminus
+% \Omega^\tau_{\theta_0}(\xi,\gamma).
+% \]
+% The valid OOD region targeted by expansion is therefore
+% \[
+%     \Omega^\star(\xi,\gamma)
+%     \setminus
+%     \Omega_{\theta_0}^{\tau}(\xi,\gamma).
+% \]
+
+% Concretely, for a given context $(\mathbf o,\gamma)$, the pre-trained policy $p_1^{\theta_{\mathrm{0}}}(\cdot\mid\mathbf
+% o,\gamma)$  samples only its \emph{generable set}:
+% \begin{equation}
+% \Omega^{\tau}_{\theta_{\mathrm{0}}}
+% (\mathbf o,\gamma)=\{\hat{\mathbf u}: p_1^{\theta_{\mathrm{0}}}(\hat{\mathbf u}\mid\mathbf
+% o,\gamma)\ge\tau\},
+% \end{equation}
+% which is the region likely to be sampled and preferably draws from dominant modes. Here, we abbreviate and refer to the sample as $H$ steps of predicted actions $\mathbf{\hat u}_{k:k+H-1}$ as $\mathbf{\hat u}$. 
+
+% Let $\Omega^{*}(\mathbf o,\gamma)=\{\hat{\mathbf u}: v(\hat{\mathbf u};\mathbf o,\gamma)=1\}$
+% denote the \emph{valid action set} certified by the verifier polytope of~\eqref{eq:socp}. Since the planner explores few dominant modes due to \textit{local infeasibility}, it is followed that $\mathrm{Vol}(\Omega^{\tau}_{\theta_0})
+% \ll\mathrm{Vol}(\Omega^{*})$. Valid samples will lie in the valid out-of-distribution region $\Omega^{*}\setminus\Omega^{\tau}_
+% {\theta_{0}}$. 
+
+% % Here we introduce our flow expansion mechanism, contingent to \cite{de2026active}. For the sake of simplicity, we refer to the sample as $H$ steps of predicted actions ($\mathbf{\hat u}_{k:k+H-1}$). We self-generate the action prediction at each time step and execute predicted actions. This yields trajectory generation, and for those that complete the task (\textit{i.e.,} reach the goal while maintained safe) each action prediction assigned a binary function value of $v(\mathbf{\hat u}_{k:k+H-1})$ viz \eqref{eq:verifier}. 
+
