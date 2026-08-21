@@ -1,3 +1,343 @@
+\section{Appendix: Safe Flow Expansion Analysis}\label{sec:safe-flow-expansion-analysis}
+
+% NOTE (blue edits): the statistical model now precedes the reachability analysis, so the
+% reachable operator is defined once, after the objects it depends on. This removes the
+% duplicate \label{eq:reachable-action-set} and the forward references.
+
+\noindent\textbf{Verifier uncertainty model.}
+We use bandits with preference feedback theory to provide confidence intervals for verifier uncertainty. Fix the context and safety pair \((\xi,\gamma)\), then the noised flow representation induces the conditional representation space
+\begin{equation}
+    \begin{aligned}
+        \phi_s(\cdot;\xi,\gamma)&:\mathcal U^H\rightarrow
+        \mathcal Z_{\xi,\gamma},\\
+        \mathcal Z_{\xi,\gamma}
+        &:=
+        \left\{
+        \phi_s(\hat{\mathbf u};\xi,\gamma):
+        \hat{\mathbf u}\in\mathcal U^H
+        \right\}.
+    \end{aligned}
+    \label{eq:conditional-representation-space}
+\end{equation}
+For \(z=\phi_s(\hat{\mathbf u};\xi,\gamma)\), the binary verifier feedback can be modeled as the composition of sigmoid function and unknown validity function on the representation space
+\begin{equation}
+    \Pr(y=1\mid z)=s(g(z)), \quad
+    s(a):=(1+\exp(-a))^{-1},
+    \label{eq:logistic-verifier-model}
+\end{equation}
+where $h>0$ is a threshold, \(g\in\mathcal H_k\) is an unknown function in the Reproducing Kernel Hilbert Space (RKHS) associated
+with kernel \(k\), with \(\|g\|_k\le B\). Then the valid representation set is
+\begin{equation}
+\Omega_* := \{z\in Z : s(g(z)) \ge h\}.
+\label{eq:prob_valid_set}
+\end{equation}
+Let \(\mu_t\) denote the
+regularized kernel logistic estimator obtained from \(t\) verified
+queries \(\{(z_i,y_i)\}_{i=1}^t\) (See Prop.1~\cite{pasztor2024bandits}). Its uncertainty score is
+\begin{equation}
+    \sigma_t^2(z)
+    :=
+    k(z,z)
+    -
+    k_t(z)^\top
+    \left(K_t+\lambda\kappa I_t\right)^{-1}
+    k_t(z),
+    \label{eq:kernel-logistic-uncertainty}
+\end{equation}
+where \([k_t(z)]_i=k(z_i,z)\), \([K_t]_{ij}=k(z_i,z_j)\),
+\(\lambda>0\), and
+\(\kappa:=\sup_{|a|\le B}1/\dot{s}(a)\).
+\begin{lemma}[Thm.2~\cite{pasztor2024bandits}]
+\label{thm:kernelized-logistic-confidence}
+Let
+\(A\subseteq\mathcal Z_{\xi,\gamma}\) be compact and suppose
+\(k(z,z)\le1\) for all \(z\in A\). Assume
+\(g\in\mathcal H_k\) and \(\|g\|_k\le B\). For \(0<\delta<1\), define the interval and information gain:
+\begin{align}
+    \beta_t^A(\delta)
+    &:=
+    4L_sB+
+    2L_s
+    \sqrt{
+    \frac{2\kappa}{\lambda}
+    \left(\mathcal I_t^A+\log(1/\delta)\right)
+    },
+    \label{eq:logistic-confidence-radius}\\
+    \mathcal I_t^A
+    &:=
+    \max_{z_1,\ldots,z_t\in A}
+    \frac{1}{2}
+    \log\det\left(
+    I_t+(\lambda\kappa)^{-1}K_t
+    \right),
+    \label{eq:maximum-information-gain}
+\end{align}
+where \(L_s:=\sup_{|a|\le B}\dot{s}(a)\). Then
+\begin{equation}
+    \begin{aligned}
+        \Pr\bigl(\forall t\ge1,\ \forall z\in A:\\
+        \left|s(\mu_t(z))-s(g(z))\right|
+        &\le\beta_t^A(\delta)\sigma_t(z)
+        \bigr)
+        \ge1-\delta.
+    \end{aligned}
+    \label{eq:anytime-logistic-confidence}
+\end{equation}
+\end{lemma}
+Thus a single event of probability at least \(1-\delta\) controls all
+query rounds at time $t$ and representation features $z$. In particular, the lower
+confidence bound
+\(
+s(\mu_t(z))-\beta_t^A(\delta)\sigma_t(z)
+\)
+is used below to expand the verifier-certified set. We want to pullback to our original action space~\footnote{The canonical kernel metric is used $d_k(z,z')
+:=
+\left\|
+k(z,\cdot)-k(z',\cdot)
+\right\|_{\mathcal H_k}$}., define
+\begin{equation}
+d_{\phi,k}^{\xi,\gamma}
+(\hat{\mathbf u},\hat{\mathbf u}')
+:=
+d_k\!\left(
+\phi_s(\hat{\mathbf u};\xi,\gamma),
+\phi_s(\hat{\mathbf u}';\xi,\gamma)
+\right).
+\label{eq:pullback-kernel-metric}
+\end{equation}
+By the reproducing property in RKHS, under the assumption that $s$ is $L_s$--Lipschitz,
+\begin{equation}
+\left|
+\rho_\gamma(\hat{\mathbf u})
+-\rho_\gamma(\hat{\mathbf u}')
+\right|
+\le
+L_sB\,
+d_{\phi,k}^{\xi,\gamma}
+(\hat{\mathbf u},\hat{\mathbf u}').
+\label{eq:rkhs-spatial-bound}
+\end{equation}
+
+We can now define the verifier-certified set from its representation surrogate~\eqref{eq:logistic-verifier-model}
+\begin{equation}
+\mathcal V_{\gamma}(\xi)
+:=
+\left\{
+\hat{\mathbf u}\in\mathcal U^H:
+\rho_\gamma(\hat{\mathbf u})\ge h
+\right\}.
+\label{eq:representation-valid-certified-set}
+\end{equation}
+The certified generable set is
+\begin{equation}
+\mathcal G_{\theta_t}^{\tau}(\xi,\gamma)
+:=
+\Omega_{\theta_t}^{\tau}(\xi,\gamma)
+\cap
+\mathcal V_\gamma(\xi).
+\label{eq:certified-generable-set}
+\end{equation}
+
+\noindent\textbf{Reachability analysis.}
+Given the statistical model in~\eqref{eq:prob_valid_set}, binary feedback in the original action space $\mathcal U^H$ is given as \( \rho_\gamma(\hat{\mathbf u})=s\!\left(g(\phi_s(\hat{\mathbf u};\xi,\gamma))\right)\).
+Let \(S_t\) denote the action set certified by the lower confidence
+bound after \(t\) verified queries, and let
+\(\varnothing\neq S_0\subseteq
+\mathcal G_{\theta_0}^{\tau}(\xi,\gamma)\) denote an initially
+generable valid seed. For \(\epsilon>0\) and the fixed pair
+\((\xi,\gamma)\), define the one-step reachable operator as:
+\begin{equation}
+\begin{aligned}
+R_\epsilon(S)
+&:=
+\Bigl\{
+\hat{\mathbf u}\in\mathcal U^H:
+\exists\hat{\mathbf u}'\in S\ \text{s.t.}\\[-1mm]
+&\quad
+\rho_\gamma(\hat{\mathbf u}')-\epsilon
+-L_sB\,d_{\phi,k}^{\xi,\gamma}
+(\hat{\mathbf u},\hat{\mathbf u}')\ge h
+\Bigr\}.
+\end{aligned}
+\label{eq:reachable-action-set}
+\end{equation}
+Subsequently, we can define
+\begin{equation}
+\begin{aligned}
+R_\epsilon^0(S)&:=S,\qquad
+R_\epsilon^{j+1}(S):=R_\epsilon(R_\epsilon^j(S)),\\
+R_\epsilon^{\le r}(S)&:=
+\bigcup_{j=0}^{r}R_\epsilon^j(S).
+\end{aligned}
+\label{eq:cumulative-reachable-action-set}
+\end{equation}
+
+{\color{blue}
+The seed is supplied by the planner rather than assumed: by Proposition~\ref{prop: 3} every action window accepted by MPPI-DCBF is verifier-positive, so $S_0\neq\varnothing$ whenever the demonstrations are non-empty. The analysis needs the mildly stronger statement that it occupies volume.
+\begin{assumption}[Positive-volume certified seed]
+\label{ass:positive-volume-seed}
+For the fixed pair $(\xi,\gamma)$, the initial certified seed satisfies
+$S_0\subseteq\mathcal G_{\theta_0}^{\tau}(\xi,\gamma)$ and
+$\operatorname{Vol}(S_0)>0$.
+\end{assumption}
+}
+
+\begin{lemma}[Corollary~4.2~\cite{de2026active}]
+\label{lem:reachable-generable-coverage}
+The following is its conditional action-space adaptation. Fix \(r\ge1\)
+and let \(T^\star=rT\) be verifier queries. Under the
+assumptions in Appendix~\ref{sec:safe-flow-expansion-analysis}, with probability at least \(1-\delta\),
+\begin{equation}
+R_\epsilon^r(S_0)
+\subseteq
+R_\epsilon^{\le r}(S_0)
+\subseteq
+S_{T^\star}
+\subseteq
+\Omega_{\theta_{T^\star}}^\tau(\xi,\gamma).
+\label{eq:main_inclusion}
+\end{equation}
+\end{lemma}
+
+Define the coverage event and its deterministic verifier-safe part as
+\begin{align}
+\mathcal E_{\mathrm{cov}}
+&:=
+\left\{
+R_\epsilon^{\le r}(S_0)
+\subseteq S_{T^\star}
+\subseteq\Omega_{\theta_{T^\star}}^\tau(\xi,\gamma)
+\right\},
+\label{eq:coverage-event}\\
+A_{\gamma,r}(\xi)
+&:=
+R_\epsilon^{\le r}(S_0)
+\cap\Omega^\star(\xi,\gamma).
+\label{eq:safe-reachable-region}
+\end{align}
+On \(\mathcal E_{\mathrm{cov}}\),
+\begin{equation}
+A_{\gamma,r}(\xi)
+\subseteq
+\Omega_{\theta_{T^\star}}^\tau(\xi,\gamma)
+\cap\Omega^\star(\xi,\gamma).
+\label{eq:safe-generable-inclusion}
+\end{equation}
+Moreover, Assumption~\ref{ass:positive-volume-seed} gives
+\begin{equation}
+\begin{aligned}
+m_\gamma(\xi)
+&:=
+\operatorname{Vol}\!\left(A_{\gamma,r}(\xi)\right)\\
+&\ge\operatorname{Vol}(S_0)>0.
+\end{aligned}
+\label{eq:positive-reachable-volume}
+\end{equation}
+
+Having defined the conditional generable set~\eqref{eq:conditional-generable-set} and the verifier-valid action set~\eqref{eq:representation-valid-certified-set}, and the rechable operator~\eqref{eq:reachable-action-set}, we now state the main theorem on how set coverage via the expansion mechanism translates into the probability of obtaining a safe action window under a finite parallel sampling budget. The result separates the high-probability coverage guarantee over the expansion process from the deployment-time probability induced by sampling the learned policy.
+
+\begin{theorem}[Availability of a multi-step safe action]
+\label{thm:safe-action-availability}
+Assume the conditions of Lemma~\ref{lem:reachable-generable-coverage} and Lemma~\ref{thm:kernelized-logistic-confidence}, with $m_\gamma(\xi):=\operatorname{Vol}\!\left(R_\epsilon^r(S_0)\cap\Omega^\star(\xi,\gamma)\right)>0.$
+After the safe flow expansion in
+Lemma~\ref{lem:reachable-generable-coverage}, draw \(K\)
+conditionally independent samples $\hat{\mathbf u}^{(1:K)}
+\overset{\mathrm{i.i.d.}}{\sim}p_1^{\theta_{\hat n}}(\cdot\mid\xi,\gamma)$. Then conditioned on the \(1-\delta\) coverage event in Lemma~\ref{lem:reachable-generable-coverage},
+\begin{align}
+&\Pr\!\left(
+\exists j\le K:
+v_\gamma(\hat{\mathbf u}^{(j)};\xi)=1
+\right)\\
+&\ge
+1-
+\left(1-\tau m_\gamma(\xi)\right)^K
+\ge
+1-\exp\!\left(-K\tau m_\gamma(\xi)\right).
+\label{eq:safe-action-hit-probability}
+\end{align}
+Consequently, over both expansion and generation randomness the probability of coverage holds and at least one action being safe is $(1-\delta)\left[1-\left(1-\tau m_\gamma(\xi)\right)^K\right].$
+\end{theorem}
+{\color{red} MH Question 1: If the verifier is not used at deployment, the selected sample could still be unsafe, right?}
+
+{\color{red} MH Q2: this theorem is written for fixed context $\xi$, which may never repeat during the mission}
+
+\begin{proof}
+On the coverage event~\eqref{eq:coverage-event}, it holds that $
+R_\epsilon^r(S_0)
+\subseteq
+\Omega_{\theta_{\hat n}}^\tau(\xi,\gamma).
+$
+Since the probability density lower bound $\tau$ applies to the entire volume $m_\gamma(\xi)$ under the coverage event, hence
+\[
+\Pr\!\left(
+\hat{\mathbf u}\in
+R_\epsilon^r(S_0)\cap\Omega^\star(\xi,\gamma)
+\right)
+\ge
+\tau m_\gamma(\xi).
+\]
+Conditional independence gives the complement probability in
+\eqref{eq:safe-action-hit-probability}. Every sample in
+\(\Omega^\star(\xi,\gamma)\) passes the deterministic SOCP verifier
+and is therefore multi-step safe.
+\end{proof}
+\begin{corollary}
+    Given the same $\xi$, the probability bound~\eqref{eq:safe-action-hit-probability} given by the valid action set $\Omega^\star(\xi,\gamma)$ is monotonically {\color{blue} increasing in the sampling budget $K$ and in the reachable safe volume $m_\gamma(\xi)$, so both a larger parallel budget and a further expansion round can only improve it.}
+\end{corollary}
+
+% When the pre-trained policy represents only a few dominant modes, its
+% generable set may cover only a small portion of the certified set,
+% \begin{equation}
+%     \operatorname{Vol}\!\left(
+%     \Omega_{\theta_0}^{\tau}(\xi,\gamma)
+%     \right)
+%     \ll
+%     \operatorname{Vol}\!\left(\Omega^\star(\xi,\gamma)\right).
+% \end{equation}
+
+% For a fixed target context, the verifier-positive support gap targeted
+% by expansion is therefore
+% \[
+% \Omega^\star(\xi,\gamma)
+% \setminus
+% \Omega^\tau_{\theta_0}(\xi,\gamma).
+% \]
+% The valid OOD region targeted by expansion is therefore
+% \[
+%     \Omega^\star(\xi,\gamma)
+%     \setminus
+%     \Omega_{\theta_0}^{\tau}(\xi,\gamma).
+% \]
+
+% Concretely, for a given context $(\mathbf o,\gamma)$, the pre-trained policy $p_1^{\theta_{\mathrm{0}}}(\cdot\mid\mathbf
+% o,\gamma)$  samples only its \emph{generable set}:
+% \begin{equation}
+% \Omega^{\tau}_{\theta_{\mathrm{0}}}
+% (\mathbf o,\gamma)=\{\hat{\mathbf u}: p_1^{\theta_{\mathrm{0}}}(\hat{\mathbf u}\mid\mathbf
+% o,\gamma)\ge\tau\},
+% \end{equation}
+% which is the region likely to be sampled and preferably draws from dominant modes. Here, we abbreviate and refer to the sample as $H$ steps of predicted actions $\mathbf{\hat u}_{k:k+H-1}$ as $\mathbf{\hat u}$. 
+
+% Let $\Omega^{*}(\mathbf o,\gamma)=\{\hat{\mathbf u}: v(\hat{\mathbf u};\mathbf o,\gamma)=1\}$
+% denote the \emph{valid action set} certified by the verifier polytope of~\eqref{eq:socp}. Since the planner explores few dominant modes due to \textit{local infeasibility}, it is followed that $\mathrm{Vol}(\Omega^{\tau}_{\theta_0})
+% \ll\mathrm{Vol}(\Omega^{*})$. Valid samples will lie in the valid out-of-distribution region $\Omega^{*}\setminus\Omega^{\tau}_
+% {\theta_{0}}$. 
+
+% % Here we introduce our flow expansion mechanism, contingent to \cite{de2026active}. For the sake of simplicity, we refer to the sample as $H$ steps of predicted actions ($\mathbf{\hat u}_{k:k+H-1}$). We self-generate the action prediction at each time step and execute predicted actions. This yields trajectory generation, and for those that complete the task (\textit{i.e.,} reach the goal while maintained safe) each action prediction assigned a binary function value of $v(\mathbf{\hat u}_{k:k+H-1})$ viz \eqref{eq:verifier}. 
+
+
+Fix $(\xi,\gamma)$ and let $\hat{\mathbf u}_0\in
+\operatorname{int}(\mathcal U^H)$ be an feasible MPPI--DCBF action. Suppose its rollout satisfies the nominal-polytope inequalities~\ref{eq:nominalpolytope} with strict inequality, $p_1^{\theta_0}(\cdot\mid\xi,\gamma)$ are continuous, and $p_1^{\theta_0}(\hat{\mathbf u}_0\mid\xi,\gamma)>\tau$. Under the conditions of Proposition~\ref{prop:nominal-verifier}, there exists $\rho>0$ such that
+\begin{equation}
+B_\rho(\hat{\mathbf u}_0)
+\subseteq
+\Omega_{\theta_0}^\tau(\xi,\gamma)
+\cap
+\Omega^\star(\xi,\gamma).
+\end{equation}
+Thus, strictly feasible MPPI--DCBF behavior can anchor a
+positive-volume initial set $S_0$ for Safe Flow Expansion.
+In our framework, a
 
 % While the proper design of terminal ingredients (\textit{i.e.,} a terminal set and cost) can formally guarantee recursive feasibility in traditional MPC, the non-convex nature of the resulting optimization problem often makes real-time implementation computationally intractable \cite{rawlings2020model}. SBPC methods such as MPPI face similar challenges. Rather than proving recursive feasibility, our approach ensures safety by enforcing DCBF constraints at each time step, which relies on the weaker but more practical condition of pointwise feasibility, formalized in the following assumption.
 % \begin{assumption}  \label{assumption_1}
