@@ -1,3 +1,78 @@
+\begin{algorithm}[t]
+\caption{Safe Flow Expansion}
+\label{alg:sfe}
+\small
+\DontPrintSemicolon
+
+\KwIn{pretrained CFM $\theta_0$; verifier $v_\gamma$;
+      dynamics $f$; execution cost $C$, rounds $N$; parallel episodes $P$;
+      proposal and verification budgets $K\ge B$}
+\KwOut{expanded CFM $\theta_N$}
+$\mathcal B_0, \mathcal D_0 \gets\varnothing$\;
+\For{$n\gets0$ \KwTo $N-1$}{
+    $\sigma_n\gets
+    \textsc{UpdateUncertainty}(\mathcal B_n)$\;
+
+    \Repeat{$|\{\boldsymbol{\tau}\in\mathcal R_n: \textsc{Success}(\boldsymbol{\tau})\}|\ge P$}{
+        $\mathcal R_n\gets P$ parallel rollouts under $\theta_n$\;
+
+        \ForEach{replanning step $k$ in the active rollouts}{
+            Context $\o_k=(\mathbf o_k,\gamma_k)$\;
+
+            Draw $B$ candidates from $K$ proposals:
+            \[
+            \hat{\mathbf u}^{(1:B)}
+            \sim
+            p_1^{\theta_n}
+            (\hat{\mathbf u}\mid\o_k)
+            \exp\!\left(
+            \sigma_n(\phi_s(\hat{\mathbf u}))/ \beta
+            \right)/Z
+            \]
+
+            Verify $y_j\gets
+            v_{\gamma_k}
+            (\o_k,\hat{\mathbf u}^{(j)})$,
+            \quad $j=1,\ldots,B$:
+            \[
+            \mathcal J_k^+\gets
+            \left\{
+            j\in\{1,\ldots,B\}:y_j=1
+            \right\}
+            \]
+            
+            \If{$\mathcal J_k^+=\varnothing$}{
+                \textsc{RestartRollout}()
+            }
+            
+            $j^\star\gets
+            \displaystyle
+            \arg\min_{j\in\mathcal J_k^+}
+            C(\o_k,\hat{\mathbf u}^{(j)})$\;
+
+            Rollout 
+            $\mathbf u_k\gets
+            [\hat{\mathbf u}^{(j^\star)}]_0,
+            \;
+            \mathbf x_{k+1}\gets
+            f(\mathbf x_k,\mathbf u_k)$
+            % \tcp*[h]{rollout}
+        }
+
+        $\mathcal D_n\gets
+        \mathcal D_n\cup
+        \{(\o_k, \gamma_k, \hat{u}^{(j)}, y_j)
+        \}_{j=1}^B$\;
+    }
+    $\mathcal B_{n+1}\gets
+    \textsc{UpdateBuffer}(\mathcal B_n,\mathcal D_n)$\;
+
+    $\theta_{n+1}\gets
+    \textsc{UpdateCFM}(\theta_n,\mathcal D_n)$\;
+}
+\Return{$\theta_N$}\;
+\end{algorithm}
+
 \section{Appendix: Safe Flow Expansion Analysis}\label{sec:safe-flow-expansion-analysis}
 
 % NOTE (blue edits): the statistical model now precedes the reachability analysis, so the

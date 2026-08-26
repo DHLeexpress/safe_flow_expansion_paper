@@ -1,0 +1,171 @@
+Under \cite[Assumptions~F.1--F.3]{de2026active}, with the admissible density threshold $\tau$ and conditions of \cite[Thm.~F.5]{de2026active}, we can describe how CFM model updates, verifier learning via feedback, and active sampling interact. Specifically, these assumptions are, respectively, (1) an Energy Based Model (EBM)-based update as an abstract of each CFM model update\footnote{The generative update is assumed to retain high density on valid actions and suppress density sufficiently far from them.}, (2) a compact domain that queried actions are assumed to lie on, with $k_\phi^{\o,\gamma}(\mathbf u,\mathbf u')\le1$ on this domain, and (3) conditions where uncertainty-guided sampling~\eqref{eq:importancesampling} to acheive closest to maximum uncertainty over the current conditional generable set.
+\end{assumption}
+
+Assume that $g$ is $L_g$-Lipschitz with respect to a metric $d$ on $\mathcal Z_{\o,\gamma}$, and that
+the sigmoid $\varsigma$ is $L_s$-Lipschitz. For $\epsilon>0$, let $S_0\subset\mathcal U^H$ be a measurable set satisfying
+\begin{equation}
+\begin{aligned}
+&\operatorname{Vol}(S_0)>0,\qquad
+S_0
+\subseteq
+\Omega_{\theta_0}^{\tau}(\o,\gamma)
+\cap
+\Omega^\star(\o,\gamma),\\
+&
+\inf_{\hat{\mathbf u}\in S_0}
+\varsigma\!\left(
+g\!\left(\phi_s(\hat{\mathbf u};\o,\gamma)\right)
+\right)
+\ge h+\epsilon,
+\qquad 0<\epsilon<1-h.
+\end{aligned}
+\label{eq:safe-seed-set}
+\end{equation}
+We can then define the one-step reachability operator that captures the sufficient one-step reachable action set through the frozen representation $\phi_s$ that the current set $S$ can reach within an accuracy of $\epsilon$ as 
+\begin{equation*}
+\begin{aligned}
+&R_\epsilon(S):=\{
+\hat{\mathbf u}\in\mathcal U^H:
+\ \exists\hat{\mathbf u}'\!\in S\ \text{s.t.}\\&\varsigma\!\left(
+g\!\left(\phi_s(\hat{\mathbf u}'\!;\!\o,\!\gamma)\right)
+\right)\!-\!L_sL_g\,d\!\left(
+\phi_s(\hat{\mathbf u};\!\o,\!\gamma),\!
+\phi_s(\hat{\mathbf u}'\!;\!\o,\!\gamma)
+\right)\!-\!\epsilon\!\ge\!h\}.
+\end{aligned}
+\label{eq:reachable-action-set}
+\end{equation*}
+By Lipschitz continuity, every
+$\hat{\mathbf u}\in R_\epsilon(S)$ satisfies
+$\varsigma(f_{\o,\gamma}(\hat{\mathbf u}))\ge h+\epsilon$.
+Thus, $R_\epsilon(S)$ is valid under the stochastic surrogate model~\eqref{eq:valid-repres-set}. Let $R_\epsilon^r(S_0)$ denote its $r$-fold recursive application. Here we state a theoretical bridge showing that MPPI--DCBF pretraining data can suffice to construct the initial set $S_0$ under proper assumptions that these pretraining data are sufficiently generalizable with threshold $\tau$ and their representations are sufficiently valid
+
+\begin{assumption} [Positive-volume representation prior]
+\label{ass:mppi-dcbf-seed}
+For the discrete-time system in~\eqref{eq:affinesystem}, a sufficient construction of $S_0$ is obtained from a finite, nonempty collection
+$\{\hat{\mathbf u}_0^{(q)}\}_{q=1}^{Q}$ of MPPI--DCBF actions at the fixed $(\o,\gamma)$. Suppose each
+$\hat{\mathbf u}_0^{(q)}$ lies in
+$\operatorname{int}(\mathcal U^H)$, its nominal-polytope
+inequalities~\eqref{eq:nominalpolytope} holds strictly, and
+\begin{equation}
+\begin{aligned}
+p_1^{\theta_0}
+(\hat{\mathbf u}_0^{(q)}\!\!\mid\!\o,\!\gamma)&>\tau,\quad
+\varsigma\!\left(\!g\!\left(\!
+\phi_s(\hat{\mathbf u}_0^{(q)};\!\o,\!\gamma)
+\right)\right)\!>h+\epsilon.
+\end{aligned}
+\end{equation}
+\end{assumption}
+Since we assumed continuous dynamics Assumption
+If $p_1^{\theta_0}(\cdot\mid\o,\gamma)$, and
+$\varsigma\circ g\circ\phi_s$ are continuous at these actions, then
+there exist radii $\rho_q>0$ such that
+\begin{equation}
+S_0
+:=
+\bigcup_{q=1}^{Q}
+B_{\rho_q}\!\left(\hat{\mathbf u}_0^{(q)}\right)
+\label{eq:mppidcbf-seed-set}
+\end{equation}
+satisfies~\eqref{eq:safe-seed-set}. It is important to note that the membership of these neighborhoods in $\Omega^\star(\o,\gamma)$ follows from Proposition~\ref{prop:nominal-verifier} and the strict inequality
+
+\begin{corollary}[Multi-step safe action generation]
+\label{thm:safe-action-availability}
+Let $T$ denote the query-block length sufficient for one application
+of $R_\epsilon$ under the conditions of
+\cite[Thm.~F.5]{de2026active}. Hence,
+$T^\star:=rT$ is the total number of verified action queries required
+for the $r$-fold reachable expansion. For a fixed $(\o,\gamma)$, $\delta\in(0,1)$,
+$0<\epsilon<1-h$, and an integer $r\ge1$, suppose there exists an initial set $S_0$ from collection of safe action priors from MPPI--DCBF~\eqref{eq:mppidcbf-seed-set} that satisfies~\eqref{eq:safe-seed-set}, and the assumptions~\ref{assumptions:afe} hold. Then, together with the confidence event~\cite[Thm.~2]{pasztor2024bandits} after applying the reachability operator a sufficient number of times, it implies a generable set coverage event
+\begin{equation}
+\mathcal E_{\mathrm{cov}}
+:=
+\left\{
+R_\epsilon^r(S_0)
+\subseteq
+\Omega_{\theta_{T^\star}}^\tau(\o,\gamma)
+\right\},
+\quad
+\Pr(\mathcal E_{\mathrm{cov}})\ge1-\delta.
+\label{eq:coverage-event}
+\end{equation}
+\noindent Let
+\begin{equation}
+\begin{aligned}
+\mathcal A_{\gamma,r}(\o)
+&:=
+R_\epsilon^r(S_0)
+\cap
+\Omega^\star(\o,\gamma),\\
+m_{\gamma,r}(\o)
+&:=
+\operatorname{Vol}
+\!\left(
+\mathcal A_{\gamma,r}(\o)
+\right).
+\end{aligned}
+\label{eq:safe-reachable-region}
+\end{equation}
+Then by~\eqref{eq:safe-seed-set}, each
+$\hat{\mathbf u}\in S_0$ can certify itself in
+$R_\epsilon(S_0)$; monotonicity of $R_\epsilon$ therefore gives
+$S_0\subseteq R_\epsilon^r(S_0)$ for every $r\ge1$.
+\begin{equation}
+m_{\gamma,r}(\o)
+\ge
+\operatorname{Vol}(S_0)>0.
+\label{eq:positive-safe-reachable-volume}
+\end{equation}
+Then for every $r\ge0$ the guaranteed valid reachable subset expands monotonically by recursion,
+\begin{equation}
+\label{eq:monotonicity}
+R_\epsilon^r(S_0)
+\subseteq
+R_\epsilon^{r+1}(S_0),
+\qquad
+\mathcal A_{\gamma,r}(\o)
+\subseteq
+\mathcal A_{\gamma,r+1}(\o).
+\end{equation}
+Sampling in the expanded model can be denoted as
+\[
+\hat{\mathbf u}
+\mid\theta_{T^\star}
+\sim
+p_1^{\theta_{T^\star}}(\cdot\mid\o,\gamma).
+\]
+Then, with probability taken jointly over the expansion procedure and a sampling from the resulting CFM policy,
+\begin{equation}
+\Pr\!\left[
+v_\gamma(\hat{\mathbf u};\o)=1
+\right]
+\ge
+(1-\delta)\tau m_{\gamma,r}(\o)
+\ge
+(1-\delta)\tau\operatorname{Vol}(S_0)>0.
+\label{eq:main1}
+\end{equation}
+Furthermore, at each replanning step draw \(J\) conditionally independent samples $\hat{\mathbf u}^{(1:J)}
+\overset{\mathrm{i.i.d.}}{\sim}p_1^{\theta_{T^\star}}(\cdot\mid\o,\gamma)$. Then conditioned on the \(1-\delta\) generable set coverage event~\eqref{eq:coverage-event},
+\begin{align}
+&\Pr\!\left(
+\exists j\le J:
+v_\gamma(\hat{\mathbf u}^{(j)};\o)=1
+\,\middle|\,
+\mathcal E_{\mathrm{cov}} \notag
+\right)\\
+&\ge
+1-
+\left(1-\tau m_{\gamma,r}(\o)\right)^J
+\ge
+1-\exp\!\left(-J\tau m_{\gamma,r}(\o)\right).
+\label{eq:main2}
+\end{align}
+\end{corollary}
+This pointwise result lower-bounds valid probability at a
+fixed $(\o,\gamma)$; it does not attach a hard certificate to an
+unverified draw or establish recursive closed-loop feasibility.
+
+Safe Flow Expansion constructs a monotonically expanding valid subset that the learned generable set is guaranteed to cover. Conditioned on the generable set coverage event $\mathcal E_{\mathrm{cov}}$,
+$\tau m_{\gamma,r}(\o)$ is the probability mass lower bound of the conditional generable set, and $m_{\gamma,r}(\o)$ is the volume of $A_{\gamma,r}(\o)$. Therefore, $\tau m_{\gamma,r}(\o)$ lower-bounds the probability that one sample from the expanded CFM model lies in $A_{\gamma,r}(\o)\subseteq\Omega^\star(\o,\gamma)$. Likewise, $\left(1-\tau m_{\gamma,r}(\o)\right)^J$ upper-bounds the probability that none of the $J$ conditionally independent samples lies in this valid action set. Increasing $J$ increases the probability that a batch contains at least one valid action. Exploiting this bound at deployment, however, requires an online verifier mechanism, where this mode-selective generation is a common tool in CFM policy generation~\cite{mizuta2025unified}.
