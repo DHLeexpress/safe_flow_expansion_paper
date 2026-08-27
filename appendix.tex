@@ -1,55 +1,39 @@
-\section{Appendix: Safe Flow Expansion analysis}
-We instantiate the generable-set reachability analysis of~\cite{de2026active} for SFE. Their expansion is stated in a learned representation space; our verifier~\eqref{eq:verifier-certified-set} and the conditional generable set~\eqref{eq:conditional-generable-set} are defined on $\mathcal U^H$, so we keep $\mathcal U^H$ as the analysis domain and carry the representation only through the frozen kernel
+\section{Analysis Details for Safe Flow Expansion}
+\label{app:sfe-analysis}
+
+We apply the generable set expansion analysis of~\cite{de2026active} directly in the SFE action space. The cited theorem is written in a learned representation space, whereas our verifier~\eqref{eq:verifier-certified-set} and conditional generable set~\eqref{eq:conditional-generable-set} are defined on $\mathcal U^H$. We therefore state its conditions on $\mathcal U^H$ and use the representation only through the frozen kernel
 \begin{equation}
-k_{\phi}^{\o,\gamma}(\hat{\mathbf u},\hat{\mathbf u}’)
-:=k(\phi_s(\hat{\mathbf u};\o,\gamma),\phi_s(\hat{\mathbf u}’;\o,\gamma)).
+k_{\phi}^{\o,\gamma}(\hat{\mathbf u},\hat{\mathbf u}')
+:=k(\phi_s(\hat{\mathbf u};\o,\gamma),\phi_s(\hat{\mathbf u}';\o,\gamma)).
 \end{equation}
 
-Our verifier returns a deterministic label, so the statistical model below describes only how queries explore; deterministic validity is recovered by intersecting the reachable set with $\Omega^\star(\o,\gamma)$. All statements are pointwise in $(\o,\gamma)$. \begin{assumption}[Analysis model, {\cite[App.~F]{de2026active}}] \label{assumptions:afe} Fix $(\o,\gamma)$ and a validity threshold $p_{\min}\in(0,1)$. (i) Verifier labels follow the RKHS logistic model $\Pr[Y=1\mid\hat{\mathbf u}]=\varsigma(g(\phi_s(\hat{\mathbf u};\o,\gamma)))$, for which anytime confidence sequences exist~\cite{pasztor2024bandits}, with $\varsigma$ the $L_\varsigma$-Lipschitz sigmoid, $\|g\|_{k_\phi^{\o,\gamma}} \le B_g$, $g$ $L_g$-Lipschitz in a metric $d$, and $\phi_s$ frozen over the query sequence. (ii) Queried actions lie in a compact subset of $\mathcal U^H$ on which $k_\phi^{\o,\gamma}\le1$. (iii) Each CFM update realizes the energy-based update abstracted in~\cite{de2026active}, and the uncertainty tilted sampling~\eqref{eq:importancesampling} approximately maximizes $\sigma_n$ over the current conditional generable set.
+The verifier here, $v_\gamma$, is deterministic. The random variable $Y$ below is used only by the probabilistic model in the analysis and is not the verifier output. Deterministic validity is imposed separately through the common set with $\Omega^\star(\o,\gamma)$.
+\begin{assumption}[Analysis model, {\cite[App.~F]{de2026active}}]
+\label{assumptions:afe}
+Fix $(\o,\gamma)$ and a validity threshold $p_{\min}\in(0,1)$.
+(i) The auxiliary binary observation follows the RKHS logistic model $\Pr[Y=1\mid\hat{\mathbf u}]=\varsigma(g(\phi_s(\hat{\mathbf u};\o,\gamma)))$, for which anytime confidence sequences exist~\cite{pasztor2024bandits}, with $\varsigma$ the $L_\varsigma$-Lipschitz sigmoid, $g\circ\phi_s(\cdot;\o,\gamma)\in\mathcal H_{k_\phi^{\o,\gamma}}$, $\|g\circ\phi_s(\cdot;\o,\gamma)\|_{k_\phi^{\o,\gamma}}\le B_g$, $g$ is $L_g$-Lipschitz in a metric $d$, and $\phi_s$ frozen over the query sequence.
+(ii) Queried actions lie in a compact subset of $\mathcal U^H$ on which
+$k_\phi^{\o,\gamma}\le1$.
+(iii) Each CFM update uses the energy-based model update described
+in~\cite{de2026active}. Within the current conditional generable set, the uncertainty-tilted sampler in~\eqref{eq:importancesampling} selects an action that approximately maximizes $\sigma_n$.
 \end{assumption}
 
-\noindent For $\epsilon\in(0,1-p_{\min})$, we denote a measurable $S_0\subseteq\mathcal U^H$ a \textit{seed set} if $\operatorname{Vol}(S_0)>0$, $S_0\subseteq\Omega^{\tau}_{\theta_0}(\o,\gamma)\cap\Omega^\star(\o,\gamma)$, and $\inf_{\hat{\mathbf u}\in S_0}\varsigma(g(\phi_s(\hat{\mathbf u};\o,\gamma))) \ge p_{\min}+\epsilon$. Let $R_\epsilon$ denote the one-step reachability operator of~\cite[Eq.~(14)]{de2026active} evaluated through $\phi_s$, and $R_\epsilon^r$ its $r$-fold iterate.
-
-\begin{lemma}[Positive-volume seed from MPPI-DCBF]
-\label{lem:seed}
-Let $\{\hat{\mathbf u}_0^{(q)}\}_{q=1}^{Q}\subset\operatorname{int}(\mathcal U^H)$
-be finitely many MPPI-DCBF actions satisfying~\eqref{eq:nominalpolytope}
-strictly, with $p_1^{\theta_0}(\hat{\mathbf u}_0^{(q)}\mid\o,\gamma)>\tau$ and
-$\varsigma(g(\phi_s(\hat{\mathbf u}_0^{(q)};\o,\gamma)))>p_{\min}+\epsilon$. If
-$p_1^{\theta_0}(\cdot\mid\o,\gamma)$ and $\varsigma\circ g\circ\phi_s$ are
-continuous at these actions, there exist radii $\rho_q>0$ such that
-$S_0:=\bigcup_q B_{\rho_q}(\hat{\mathbf u}_0^{(q)})$ is a seed set.
-\end{lemma}
-\begin{proof}
-Strict inequalities persist on a neighborhood by continuity, and membership in $\Omega^\star(\o,\gamma)$ follows from~\Cref{prop:nominal-verifier}.
-\end{proof}
-
-\begin{lemma}[{\cite[Thm.~F.5]{de2026active}}, stated on $\mathcal U^H$] \label{lem:coverage}
-Fix $\delta\in(0,1)$, $\epsilon\in(0,1-p_{\min})$, $r\ge1$, and a seed $S_0$.
-Under Assumption~\ref{assumptions:afe} there is a query budget $T^\star=rT$
-such that the coverage event
-$\mathcal E_{\mathrm{cov}}:=\{R_\epsilon^r(S_0)\subseteq
-\Omega_{\theta_{T^\star}}^\tau(\o,\gamma)\}$ satisfies
+\begin{lemma}[Version of {\cite[Thm.~F.5]{de2026active}} in action space]
+\label{lem:coverage}
+Fix $\delta\in(0,1)$, $\epsilon\in(0,1-p_{\min})$, a positive integer $r$, and a seed $S_0$.
+Assume every condition of~\cite[Thm.~F.5]{de2026active} after replacing its state set with $\mathcal U^H$ and its feature map by $\phi_s(\cdot;\o,\gamma)$~\footnote{This includes the conditions on the energy-based model, density threshold, calibration, oracle, sample-complexity conditions, and auxiliary radius.}.
+There is a budget $T^\star=rT$ for queries and then updates such that the coverage event with the fixed context
+\[
+\mathcal E_{\mathrm{cov}}
+:=
+\left\{
+R_\epsilon^r(S_0)
+\subseteq
+\Omega_{\theta_{T^\star}}^\tau(\o,\gamma)
+\right\}
+\]
+satisfies
 $\Pr(\mathcal E_{\mathrm{cov}})\ge1-\delta$.
 \end{lemma}
 
-\begin{corollary}[Multi-step safe action availability]
-\label{thm:safe-action-availability}
-Let $\mathcal A_{\gamma,r}(\o):=R_\epsilon^r(S_0)\cap\Omega^\star(\o,\gamma)$
-and $m_{\gamma,r}(\o):=\operatorname{Vol}(\mathcal A_{\gamma,r}(\o))$. Then
-$m_{\gamma,r}(\o)\ge\operatorname{Vol}(S_0)>0$ is nondecreasing in $r$, and
-for $J$ conditionally i.i.d.\ draws
-$\hat{\mathbf u}^{(1:J)}\sim p_1^{\theta_{T^\star}}(\cdot\mid\o,\gamma)$,
-\begin{equation}
-\begin{aligned}
-&\Pr\!\left[\exists\,j\le J:\ v_\gamma(\hat{\mathbf u}^{(j)};\o)=1\right]\\
-&\ \ge\ (1-\delta)\!\left[1-\bigl(1-\tau\,m_{\gamma,r}(\o)\bigr)^{J}\right].
-\label{eq:main1}
-\end{aligned}
-\end{equation}
-\end{corollary}
-\begin{proof}
-Each point of $S_0$ certifies itself and $R_\epsilon$ is monotone, so $S_0\subseteq R_\epsilon^r(S_0)\subseteq R_\epsilon^{r+1}(S_0)$; intersecting with $\Omega^\star(\o,\gamma)\supseteq S_0$ gives the volume bound. On $\mathcal E_{\mathrm{cov}}$ the density is at least $\tau$ on $\mathcal A_{\gamma,r}(\o)$, every point of which is verifier-positive; the batch bound follows by independence and $\Pr(\mathcal E_{\mathrm{cov}})\ge1-\delta$.
-\end{proof}
-Here $T^\star$ counts verifier calls, so $N$ rounds of $P$ episodes with $B$ queries per replanning step supply it at $B$ per step. The bound is pointwise in $(\o,\gamma)$ and structural rather than numerical: the expanded policy retains positive, monotone mass on verifier-positive actions, and the probability of drawing one approaches $1$ exponentially in $J$. It attaches no certificate to an individual unverified draw and does not establish recursive closed-loop feasibility. Its $(1-\delta)$ factor rests on the per-context uncertainty model of Assumption~\ref{assumptions:afe}(iii), whereas $\mathcal B_n$ pools contexts; the deterministic part,
-$\mathcal A_{\gamma,r}(\o)\subseteq\Omega^\star(\o,\gamma)$ and $m_{\gamma,r}(\o)\ge\operatorname{Vol}(S_0)$, is unaffected by pooling. Exploiting the bound online requires a verifier query or the mode-selection step common in CFM policy generation~\cite{mizuta2025unified}.
+Here $T^\star$ is the number of sequential query and model update steps performed at $(\o,\gamma)$. In practice, Alg.~\ref{alg:sfe} freezes $\theta_n$ and $\sigma_n$ within a batch and combines data from different contexts. Therefore, we cannot use its total number of verifier evaluations directly as $T^\star$. Combining data from different contexts does not change the definitions of $\mathcal A_{\gamma,r}(\o)$ or $m_{\gamma,r}(\o)$. However, the probability $1-\delta$ applies separately to each context. At deployment, $v_\gamma$ evaluates every candidate action before cost-based execution. 
