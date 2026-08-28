@@ -1,3 +1,39 @@
+
+
+% \subsection{2D Cluttered and Dynamic Environment: Simulation}
+% We evaluate our methods in cluttered and pedestrian environments. 
+% For the baseline method, we visualize the guidance \eqref{eq:cfm-mppi_vectorfield}--\eqref{eq:cfm-mppi_guidance} in its performance and safety components, showing the normalized finite-difference effects on the predicted robot state after guided generation on both components (Fig.~\ref{fig:2d_cluttered}, CFM-MPPI).
+% Our approach improves safety and performance even though we generate a single action at each replanning step rather than using larger candidate generative priors. This improved closed-loop result indicates that the generative distribution itself has shifted toward safe and goal-reaching actions since the policy must assign high probability to verified behavior, specifically where relying solely on the guidance cannot provide an informed policy.
+
+% For the challenging dynamic-pedestrian simulations, we used $(K,B)=(64,32)$ to acquire valid actions efficiently. The verifier used the currently observed obstacle geometry over the prediction horizon and thus certifies finite-horizon validity only with respect to that frozen scene. We used a constant-velocity model of pedestrians only for the execution cost to favor verifier-positive candidates that anticipate future collisions, while collision avoidance against moving pedestrians relies empirically on receding-horizon replanning. Fig.~\ref{fig:validity-verifier-pedestrian}(right) qualitatively shows the resulting increase in verifier validity after expansion.
+
+% \subsection{3D Quadrotor: Hardware}
+% \subsubsection{Comparison with standard self-generation}
+% \subsubsection{Validity}
+% \subsubsection{Mode Coverage}
+
+%At the next state, the selected sequence is shifted by one step and used as a warm start at flow time $\tau = 0.75$ to generate the next guided generation and refinement step.
+ % At every receding-horizon step, CFM-MPPI generates $J=32$ guided control
+% sequences from the pretrained model. Among those $8$ sequences
+% with the lowest MPPI cost are retained. Each is perturbed $M=32$ times with Gaussian noise, and MPPI cost-weighted averaging produces refined control sequences from which the minimum-cost sequence is selected, and its first action is executed. At the next state, the selected sequence is shifted by one step and used as a warm start at flow time $\tau = 0.75$ to generate the next guided generation and refinement step.
+
+\begin{itemize}[leftmargin=0pt, itemindent=0pt, label={}]
+    \item \textbf{General evaluation setup:} For 4 different motion planning tasks, we employ SFE (Alg.~\ref{alg:sfe}) to collect verified actions in previously unseen environments during pretraining while keeping the start, goal, and robot dynamics fixed. We structure the task configurations across three phases: initial training in distribution, SFE, and final testing in OOD. For the 2D pedestrian model and 3D cluttered environments, we test on completely novel, independent configurations to evaluate OOD generalization. For the 2D cluttered environment and 3D single sphere, the test configuration matches those used during expansion to evaluate OOD adaptation. After each expansion round $n$, we evaluate the expanded model $\theta_n$ independently with 16 integration steps (NFE) across multiple $\gamma$ levels. 
+    
+    In order to test the novelty of SFE, we only generate $J=1$ control sequence at each replanning step, where the effects of higher $J$ were reported in computation time Fig.~\ref{fig:coverage}(b) and in performance and safety Fig.~\ref{fig:tradeoff}. 
+    % Finally, we report validity for all 4 task configurations Fig.~\ref{fig:validity-verifier-pedestrian}, average clearance and time-to-goal for challenging OOD tasks~\ref{fig:tradeoff}, and mode coverage results were shown in Fig.~\ref{fig:hero},~\ref{fig:2d_cluttered},~\ref{fig:coverage}(a). 
+    To account for varying difficulty across the four tasks, we define the minimum success threshold $P$ as a task-specific hyperparameter, but keep it the same across the $10$ rounds. 
+    % TODOP = 8, _, _, _ for each four tasks
+    
+    
+        \item \textbf{Simulation experiments:} We evaluate our framework on 2D goal-reaching tasks. In this case, testing was conducted on unseen obstacles and more challenging dynamic pedestrians, respectively:
+    \begin{itemize}
+        \item \textit{Cluttered environments:} The robot starts at \((0.3,0.3)\) and navigates toward the fixed goal at \((4.7,4.7)\) in a \(5\,\mathrm{m}\times5\,\mathrm{m}\) taskspace. The CFM model is pretrained on an MPPI-DCBF policy from a random initial position to a fixed goal position, total 200k actions of length $H$ as shown in Fig.~\ref{fig:2d_cluttered}, in a nominal environment with regularly sized circular obstacles. We tested this by replacing the central obstacles with a previously unseen large obstacle to see whether SFE can learn long-horizon, collision-free behavior and avoid getting trapped in local minima.
+        
+        \item \textit{Dynamic pedestrians:} The robot starts at \((0,0)\) to \((6,6)\) with simulated pedestrian environment modeled by social force model~\cite{helbing1995social} where each pedestrian is a modeled reactive dynamical system whose acceleration exponentially grows as agents approach. The CFM model is pretrained on an MPPI-DCBF policy in distribution with 20 pedestrians moving at \(0.5\!-\!1.0\,\mathrm{m/s}\), whereas evaluation uses 40 pedestrians moving at \(1.0\!-\!2.0\,\mathrm{m/s}\). In these challenging dynamic tasks, the policy conditions on the 10-step history of local observations $h^\text{poly}$, unlike other tasks. We tested this to capture how SFE can learn highly reactive behaviors under dynamic environments.
+        % 10 time steps, 32 angular bins, and 100 radial bins.
+    \end{itemize}
+    
 \begin{algorithm}[t]
 \caption{Safe Flow Expansion}
 \label{alg:sfe}
