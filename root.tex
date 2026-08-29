@@ -613,11 +613,13 @@ where $\sigma_n$ is the kernel posterior uncertainty returned by \textsc{UpdateU
     \label{fig:beta}
     \vspace{-\baselineskip}
 \end{figure}
-
-At each replanning step $k$, SFE self-generates a finite batch of actions from the current CFM policy using the verifier uncertainty~\eqref{eq:importancesampling}. The verifier $v_{\gamma_k}$ is defined in Def.~\ref{def:verifier} and separates these queried actions \(\hat{\mathbf u}^{(j)}\) into valid (\textit{i.e., \(j\in\mathcal J^+_k\)}) and invalid sets. The execution cost \(C\) ranks valid action candidates, from which the first action with minimum cost is executed \footnote{With the shared execution cost $\gamma$ affects the action through the admissible set $\mathcal J_k^+$ over which the importance sampling is performed.}, while one can set this cost as expert actions \cite{ross2011reduction} or restrict execution to a safe admissible action set \cite{alshiekh2018safe}. At each expansion round, we repeat this data acquisition until we gather $P$ successful trajectories, and add both valid and invalid sets to the buffer. We add the executed actions to update the model by selecting them uniformly over the $\gamma$ and successful trajectories before the CFM update. Finally, CFM loss~\eqref{eq:cfm-loss} is regressed using the valid sets. 
+At the beginning of each expansion round, \textsc{UpdateUncertainty} fits the verifier uncertainty $\sigma_n$ from the current buffer $\mathcal B_n$ (line~3). Within the parallel rollouts, at each replanning step $k$, SFE self-generates a finite batch of actions from the current CFM policy using the verifier uncertainty~\eqref{eq:importancesampling} (lines~5--7). The verifier $v_{\gamma_k}$, defined by the finite-horizon DCBF conditions in Def.~\ref{def:verifier}, separates these queried actions $\hat{\mathbf u}^{(j)}$ into valid (\textit{i.e.,} $j\in\mathcal J_k^+$) and invalid sets, and adds both sets to $\mathcal D_n$ (lines~8--9). If no valid action exists, the rollout restarts (line~10).
+The execution cost \(C\) ranks valid action candidates, from which the first action with minimum cost is executed \footnote{With the shared execution cost $\gamma$ affects the action through the admissible set $\mathcal J_k^+$ over which the importance sampling is performed.}, while one can set this cost as expert actions \cite{ross2011reduction} or restrict execution to a safe admissible action set \cite{alshiekh2018safe}. 
+At each expansion round, we repeat this data acquisition until we gather $P$ successful trajectories (lines~13--14). Both valid and invalid sets are then added to the buffer through \textsc{UpdateBuffer}, from which \textsc{UpdateUncertainty} constructs $\sigma_{n+1}$ in the next round (line~15). Finally, we select the executed verifier-positive actions uniformly over $\gamma$ and successful trajectories, and regress the CFM loss~\eqref{eq:cfm-loss} using these valid actions in \textsc{UpdateCFM} (line~16).
 
 \textsc{UpdateBuffer} and the subsequent \textsc{UpdateUncertainty} is the key to close the acquisition loop. By updating the kernel posterior uncertainty $\sigma_{n+1}$ with the features $\phi_s$ of both valid sets and invalid sets, the next round verification budget $K$ is naturally tilted toward poorly covered modes. 
-A possible concern is that, because the buffer \(\mathcal B_n\) pools observations from finite contexts at each round, \(\sigma_n(\phi_s(\hat{\mathbf u}))\) may prioritize an action due to novelty in unrelated contexts. However, maintaining per-context uncertainty is impractical, since no finite buffer can cover the space of planning contexts--the same issues that have arisen that make conditional generative planners struggle to generalize to OOD environments without retraining \cite{ye2024efficient, dai2025safefm}. We therefore use the buffer only as an acquisition heuristic to actively explore unvisited modes \cite{de2026active}: every selected candidate is re-evaluated by \(v_\gamma(\hat{\mathbf u};\o)\) under the current context, so buffering finite samples can affect the query but not validity.
+A possible concern is that, because the buffer \(\mathcal B_n\) pools observations from finite contexts at each round, \(\sigma_n(\phi_s(\hat{\mathbf u}))\) may prioritize an action due to novelty in unrelated contexts. However, maintaining per-context uncertainty is impractical, since no finite buffer can cover the space of planning contexts--the same issues that have arisen that make conditional generative planners struggle to generalize to OOD environments without retraining \cite{ye2024efficient, dai2025safefm}. We therefore use the buffer only as an acquisition heuristic to actively explore unvisited modes \cite{de2026active} while buffering finite samples can affect the query but not validity.
+%, so every selected candidate is re-evaluated by \(v_\gamma(\hat{\mathbf u};\o)\) under the current context, so buffering finite samples can affect the query but not validity.
 
 \section{Experiments and Discussion}
 \begin{figure*}[t]
@@ -630,7 +632,7 @@ A possible concern is that, because the buffer \(\mathcal B_n\) pools observatio
     \label{fig:coverage}
 \end{figure*}
 % We evaluate whether verifier-guided offline expansion translates into practical OOD capability: increased verifier validity, recovery of motion modes absent from the demonstrations, $\gamma$-controlled safety--performance behavior, and efficient online replanning. 
-We consider two 2D simulation tasks and two 3D quadrotor tasks, covering both adaptation to a fixed OOD scenario and generalization to previously unseen OOD scenarios.
+We evaluate SFE in two 2D simulations, a 3D quadrotor simulation, and a hardware flight experiment, covering both adaptation to a fixed OOD setting and generalization to unseen configurations.
 \subsection{Evaluation Protocol and Implementation}
 \noindent\textbf{Evaluation protocol.}
 % \noindent \textbf{Train and test data details}
@@ -697,7 +699,21 @@ For 3D hardware experiments, the MPPI-DCBF demonstrations are collected among ve
 However, as SFE iteratively updates valid OOD actions back into training, the policy discovers novel lateral, over, and under modes absent from the pretraining data across the expansion rounds (second to fourth columns in Fig.~\ref{fig:coverage}(a)). The baseline method frequently collides, where the local guidance leads the robot toward the free space (\textit{e.g.,} over and under the balls) but the pretrained base flow $\mathbf{v}^{\theta_{\text{0}}}$ in~\eqref{eq:cfm-mppi_vectorfield} has a generable set that lacks enough probability mass to recover safety. In contrast, SFE shifts probability mass toward fundamentally new safe modes trained offline.
 
 \subsection{Offline expansion computation time}
-The 10-round offline expansion required approximately $1$ GPU hour on a single NVIDIA H100 NVL GPU in \emph{3D cluttered environments} for Fig.~\ref{fig:coverage}. In the profiled second expansion round, \textsc{UpdateUncertainty} (line~3), which refits the GP once at the beginning of each round, took negligible time $<0.1\%$. The acquisition loop (lines~4--14) accounted for $72\%$, where CFM proposal generation (line~7) used $11\%$, uncertainty evaluation and acquisition in(line~7) used \emph{$27\%$}, verifier evaluation (line~8) used \emph{$24\%$}, and rollout $10\%$. After the loop, \textsc{UpdateBuffer} (line~15) accounted for $7\%$, \textsc{UpdateCFM} regression (line~16) accounted for $21\%$. Thus, offline computation cost is dominated by uncertainty-guided self-generation~\eqref{eq:importancesampling} and the verification process~\eqref{eq:socp}.
+The 10-round offline expansion required approximately $1$ GPU hour on a single NVIDIA H100 NVL GPU in \emph{3D cluttered environments} for Fig.~\ref{fig:coverage}. In the profiled second expansion round, \textsc{UpdateUncertainty}
+%(line~3)
+, which refits the GP once at the beginning of each round, took negligible time $<0.1\%$. The acquisition loop 
+%(lines~4--14) 
+accounted for $72\%$, where CFM proposal generation 
+%(line~7) 
+used $11\%$, uncertainty evaluation and acquisition in 
+%(line~7) 
+used \emph{$27\%$}, verifier evaluation 
+%(line~8) 
+used \emph{$24\%$}, and rollout $10\%$. After the loop, \textsc{UpdateBuffer} 
+%(line~15) 
+accounted for $7\%$, \textsc{UpdateCFM} regression 
+%(line~16) 
+accounted for $21\%$. Thus, offline computation cost is dominated by uncertainty-guided self-generation~\eqref{eq:importancesampling} and the verification process~\eqref{eq:socp}.
 
 \subsection{Online planning latency}
 \label{sec:compute}
@@ -729,7 +745,7 @@ So far, our results show that our framework increases multi-step safety (\textit
 These results lie on the safe action support $S_0$ supplied by the safety-critical SBPC (\textit{i.e.,} MPPI-DCBF), which we describe in~\Cref{lem:seed} and which SFE iteratively expands using verified OOD actions. We here show that the shared safety parameter, $\gamma$, plays a crucial role in tuning the aggressiveness and conservativeness in both the online safety procedure and the offline training data. 
 
 The safety parameter helps the robot solve the problem at different safety levels. 
-\reply[Dohyun]{tell something about gamma}
+\reply[Dohyun]{tell something about gamma for both online planner and generative policy}
 % Recall from Fig.~\ref{fig:validity-verifier-pedestrian} that the verifier polytope construction relaxes the conservatism of a single nominal polytope that potentially excludes collision-free rollouts. 
 Fig.~\ref{fig:tradeoff} quantitatively demonstrates an interesting view on how it actually expands the safety parameter effects \emph{even further}. In two challenging OOD tasks, for both MPPI-DCBF and SFE ($J=$1), lower $\gamma$ produces more conservative behavior with greater average clearance and longer time-to-goal, whereas higher $\gamma$ produces more goal-directed behavior. By contrast, CFM-MPPI varies little across $\gamma$, consistent with its lack of sample rejection or verification. Thus, the safety parameter addresses the safety-performance tradeoff for both the online safety-critical planner and the expanded model
 
