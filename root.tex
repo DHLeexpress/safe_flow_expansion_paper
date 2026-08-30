@@ -403,6 +403,10 @@ For the discrete LTI system \eqref{eq:lti} under the same pointwise feasibility 
 \end{proposition}
 \Cref{prop:2} holds to ensure the full-horizon safety of the averaged plan as illustrated in Fig.~\ref{fig:hero}(A). Also, our receding-horizon DCBF approach parallels optimization-based methods such as MPC-CBF~\cite{zeng2021safety}.
 
+\noindent\textbf{Manipulator motion planning.}
+% and 182 sampled head points 
+As a separate study, we validate the proposed MPPI--DCBF framework on a Franka Panda FR3, a seven degree of freedom (7-DOF) robotic arm, using a \emph{LIBERO} simulator~\cite{liu2023libero}. We extend the affine barrier function~\eqref{eq:aff_barrier} from circular obstacles to non-convex obstacles by taking the closest boundary point and outward normal and defining convex half-spaces for each control point of the convex hull of the arbitrary obstacles. We impose it on the end effector after linearizing its positions with respect to the joint position. We then take~\eqref{eq:nominalpolytope} to define the nominal polytope that separates the end effector and the obstacles. Under the linearized dynamics, Proposition~\ref{prop:2} allows us to guarantee the safety. Fig.~\ref{fig:robotarm} shows collision-free trajectories toward the goal for all $\gamma$. The minimum clearance remains strictly positive, demonstrating the safe behavior of MPPI--DCBF and showing greater safety for smaller $\gamma$.
+
 \subsection{Multi-step Safety Verification}
 Before presenting Safe Flow Expansion, which incorporates rigorous safety verification into generative policies, we define a deterministic verifier that tests whether a queried action admits a finite-horizon DCBF certificate (\textit{i.e.,} multi-step safety).
 
@@ -809,6 +813,7 @@ The lower bound in~\eqref{eq:main1} is nondecreasing with $r$ as $m_{\gamma,r}(\
 
 \section{Conclusion}
 \reply[Dohyun]{Here, summarize the validity, coverage, and safety-tunability results in a few sentences.}
+
 Our next step is to scale the framework to systems with extremely large state spaces or where expert demonstrations are prohibitively expensive. In parallel, while our method robustly expands the safe action distribution, tuning the online execution cost $C$ can still shift the distribution away from the prior actions, which remains an important challenge.
 
 While under the stated assumptions in~\Cref{sec:analysis}, Corollary~\ref{thm:safe-action-availability} lower-bounds, at a fixed $(\o,\gamma)$, the probability that a generated batch of actions contains a valid action.
