@@ -357,7 +357,7 @@ As a separate study, we validate the proposed MPPI--DCBF framework on a Franka P
 \caption{\textbf{Safe Flow Expansion consistently improves validity across OOD obstacle geometries.}
 \textbf{Left}: Illustrative example of nominal polytope \eqref{eq:poly_safeset} (top) and the verifier polytope~\eqref{eq:verifierpolytope} (bottom) at the same state $H=3, d=2, \mathcal O(\xk) = \{1,2\}, \gamma=0.5$. The verifier admits actions outside the nominal polytope
 \textbf{Center}: Validity, measured as the fraction of executed actions for which \eqref{eq:socp} is feasible for every sensed obstacle, over ten expansion rounds in four OOD environments (color = $\gamma$, black = average, dashed = pretrained). Expansion raises the average in all four. 
-\textbf{Right}: expanded policy rollouts in a dense crowd at $t=4,8s$, $\gamma$ tunes the conservativeness of the behavior.}
+\textbf{Right}: expanded policy rollouts in a dense crowd at $t=4,8s$, $\gamma$ tunes the conservativeness of the behavior. The green verifier polytope at the current step shows a valid action.}
 \label{fig:validity-verifier-pedestrian}
 \vspace{-\baselineskip}
 \end{figure*}
