@@ -68,9 +68,8 @@ Safe Flow Expansion: Discovering Safe Robot Behaviors in Out-of-Distribution Mot
 \pagestyle{empty}
 \vskip -0.25 true in
 \begin{abstract}
-Generative policies pretrained on safe demonstrations often perform poorly in out-of-distribution environments because they inherit the training data's limited behavior support, and inference-time guidance only reweights samples from that fixed distribution rather than expanding what the policy can generate.
-We introduce \emph{Safe Flow Expansion}(SFE), an offline framework that iteratively self-generates actions from a conditional flow matching (CFM) policy, verifies them against finite-horizon discrete-time control barrier function (DCBF) conditions, and updates the policy to expand its set of valid actions. 
-Certified training data comes from MPPI--DCBF, a planner that rejects rollouts leaving a convex nominal polytope before averaging. Under stated conditions, the planner certifies the safety at the executed step, and its demonstrations are labeled by a safety parameter $\gamma$. We derive a conditional lower bound on the probability that a batch of generated actions contains a valid action. In 2D and 3D simulation and on Crazyflie hardware, the expanded policy achieves higher validity and mode coverage than pretrained and guided baselines and replans with far lower latency than online planners, while $\gamma$ tunes the conservativeness of both the planner and the policy.
+Generative policies pretrained on safe demonstrations often perform poorly in out-of-distribution environments because they inherit the training data's limited behavior support, and inference-time guidance only reweights samples from that fixed distribution rather than expanding what the policy can generate.We introduce \emph{Safe Flow Expansion} (SFE), an offline framework that iteratively self-generates actions from a conditional flow matching (CFM) policy, verifies them against finite-horizon discrete-time control barrier function (DCBF) conditions, and updates the policy to expand its set of valid actions. 
+SFE builds on MPPI--DCBF, our proposed sampling-based planner that rejects rollouts leaving a convex nominal polytope before averaging. Under stated conditions, MPPI--DCBF certifies the executed step and provides demonstrations are modulated by safety parameter $\gamma$. We derive a conditional lower bound on the probability that a batch of generated actions contains a valid action. In 2D and 3D simulation and on Crazyflie hardware, the expanded policy achieves higher validity and mode coverage than pretrained and guided baselines. We also showed that it replans with far lower latency than online planners, and $\gamma$ tunes the conservativeness of both the planner and the policy.
 % Sampling-based predictive control (SBPC) (e.g., model predictive path integral control (MPPI)) efficiently predicts receding-horizon actions.  However, the safety of individual MPPI rollouts do not guarantee a safe weighted average.  Moreover, policies pretrained on safe demonstrations may poorly represent safe behaviors in out-of-distribution (OOD) deployments. This paper introduces new methods to ensure safety in SBPC and to guarantee a conditional lower bound on the probability of generating a safe action.
 % We address sampling-based safety through a discrete-time control barrier function (DCBF) condition, enforced conservatively to produce certified safe data and to verify new behaviors.
 % We first introduce MPPI-DCBF, which rejects unsafe samples within a convex safe region before averaging and preserves the executed next-state safety certificate under control-affine dynamics and the full predicted-horizon certificate for linear time-invariant systems. 
@@ -108,7 +107,8 @@ Even if individual sampled trajectories satisfy safety constraints, their weight
 \end{figure}
 
 A common method to ensure safety in collision-avoidance tasks is to impose finite-horizon CBF constraints directly within MPC~\cite{zeng2021enhancing}, under nonlinear dynamics and nonconvex obstacle geometry. However, the resulting optimization can be nonconvex and computationally heavy. This computational burden motivates a shift from online constrained optimization to learning-based methods, where complex planning is performed offline to curate datasets of safe and multi-modal behavior. Generative models, such as diffusion and flow matching (FM)~\cite{lipman2022flow}, can synthesize motion trajectories and action sequences from diverse, high-dimensional demonstrations~\cite{chi2023diffusion, Kurtz_GPC}. Conditional Flow Matching (CFM) has emerged as a promising alternative to diffusion-based modeling, offering competitive generation quality with efficient sampling~\cite{chisari2024learning, ye2024efficient}. 
-% CFM is particularly useful in safety-critical motion planning and control, as it can generate high-fidelity, multi-modal trajectories with fewer inference time steps. Maintaining this topological diversity is crucial to avoid committing to a single local solution that may become infeasible as the scene changes~\cite{de2024topology, shafiullah2022behavior}. 
+% CFM is particularly useful in safety-critical motion planning and control, as it can generate high-fidelity, multi-modal trajectories with fewer inference time steps. 
+% Maintaining this topological diversity is crucial to avoid committing to a single local solution that may become infeasible as the scene changes~\cite{de2024topology, shafiullah2022behavior}. 
 However, they do not natively provide formal safety guarantees during rollout. 
 
 Recent CFM-based works have further incorporated explicit safety constraints at inference time by trajectory regularization or constrained generation~\cite{li2026hardflow,utkarsh2026physics}, while MPC-based refinement has been used to improve local optimality of generated trajectories~\cite{mizuta2025unified}. However, these methods guide or refine samples from a fixed pretrained distribution. In OOD contexts, the pretrained model may assign low probability to safe and multi-modal behaviors, and aggressive guidance can further push generation away from its learned distribution~\cite{dandapanthula2026we}.
@@ -192,7 +192,8 @@ from $\x_0\sim\mathcal N(0,I_d)$ to $t=1$, from which the first action is execut
 
 \subsection{Generable Set Expansion}
 % In offline training, generative policies constrain actions to the distribution of their demonstrations. 
-Recent work measures effective coverage by the \textit{$\tau$-generable set} $\Omega^\tau_\theta\!:=\!\{\x:p_1^\theta(\x)\ge\tau\}$, the region a model samples with non-negligible probability under a finite budget~\cite{de2026active}; pretraining leaves it a small subset of the valid design space. Generable set expansion closes that gap without full distribution matching: each round, the model self-generates candidates, a black-box verifier labels them, and continued pretraining on the accepted ones shifts probability mass toward the labeled regions. Candidates are acquired where the verifier is most uncertain in a learned flow representation, while a KL-regularized tilt of strength $\beta$ keeps the proposal close to the current model; $\beta\to\infty$ recovers standard sampling. With calibrated verifier feedback and a reachability operator, finitely many verified queries suffice for the generable set to contain, with high probability, everything reachable from a valid seed in boundedly many local steps~\cite{de2026active}. This is reachability, not coverage: valid regions disconnected from the seed in the learned representation need not be reached. We adopt this view for a $\gamma$-conditioned CFM policy, with a finite-horizon DCBF verifier replacing the black-box oracle; \Cref{sec:analysis} gives the conditional version.
+Recent work measures effective coverage by the \textit{$\tau$-generable set} $\Omega^\tau_\theta\!:=\!\{\x:p_1^\theta(\x)\ge\tau\}$, the region a FM model samples with non-negligible probability under a finite budget~\cite{de2026active}. Each expansion round self-generates candidates, labels them with a black-box verifier, and continues pretraining on the accepted samples. Candidates are acquired where the verifier is most uncertain, under a KL-regularized tilt of strength $\beta$ toward the current model. With calibrated verifier feedback~\cite{pasztor2024bandits}, finitely many verified queries then suffice, with high probability, for the generable set to contain samples that are reachable in boundedly many local steps~\cite{de2026active}. We adopt this view for a $\gamma$-conditioned CFM policy with a finite-horizon DCBF verifier in place of the black-box oracle, and Section~\ref{sec:analysis} provides the theoretical analysis. 
+
 
 \subsection{Discrete-Time Control Barrier Functions}
 Let $\mathcal{C}=\{\x\in\mathbb{R}^{n_x}:\; h(\x)\ge 0\}$ denote the safe set for a continuously differentiable $h$.
@@ -389,7 +390,7 @@ The remaining constraints fix the scale of the normal and impose the strictly po
     \centering
     \includegraphics[width=\linewidth]{images/demo_3d/beta.pdf}
     \vspace{-6.0mm}
-    \caption{Rollouts of the expanded policy in the 3D single sphere task after the same number of expansion rounds, for uncertainty weights $\beta=0.1$, $\beta=1.0$, and $\beta\to\infty$ (standard sampling from the current policy). Colors show the four modes: above, below, left, and right. Smaller $\beta$ puts more weight on uncertain actions and discovers new trajectories.}
+    \caption{Rollouts of the expanded policy in the 3D single sphere task after same expansion, run with same parameters but for uncertainty weights $\beta=0.1$, $\beta=1.0$, and $\beta\to\infty$ (standard sampling at the current policy; $\hat{\mathbf u} \sim p_1^{\theta_n}$). Colors show the four modes: above, below, left, and right. Smaller $\beta$ puts more weight on uncertain actions and discovers new trajectories.}
     \label{fig:beta}
     \vspace{-\baselineskip}
 \end{figure}
@@ -519,23 +520,29 @@ p_1^{\theta_n}(\hat{\mathbf u}\mid\o,\gamma)
 ,
 \label{eq:importancesampling}
 \end{equation}
-\begin{equation}
-Z_n(\o,\gamma)\!=\!\!\!\int_{\mathcal U^H}\nspace{-15}
+where $Z_n(\o,\gamma)$ is the normalizing constant \footnote{Define \(
+Z_n(\o,\gamma)\!=\!\int_{\mathcal U^H}
 p_1^{\theta_n}(\mathbf u\!\mid\!\o,\!\gamma)\exp\!\left(
 \sigma_n\!\left(\phi_s(\mathbf u;\o,\!\gamma)\right)/\beta
 \right)
-d\mathbf u,
+d\mathbf u.
+\)}, $\phi_s$ denotes the penultimate layer feature of the conditional flow vector field evaluated at the fixed flow-noise level $s$, and $\sigma_n$ is the kernel posterior uncertainty returned by \textsc{UpdateUncertainty} in Alg.~\ref{alg:sfe}. We modeled $\sigma_n$ as the posterior standard deviation of a Gaussian process fitted on the features $\phi_s$ to the binary observations in the buffer. For $\phi=\phi_s(\hat{\mathbf u};\o,\gamma)$, define $[\mathbf K_n]_{ij}=k(\phi_i,\phi_j)$ and $[\mathbf k_n(\phi)]_i=k(\phi_i,\phi)$. The posterior variance is
+\begin{equation}
+\sigma_n^2(\phi)=k(\phi,\phi)-\mathbf k_n(\phi)^{\!\top}\left(\mathbf K_n+\nu I\right)^{-1}\mathbf k_n(\phi),
+\label{eq:gp-uncertainty}
 \end{equation}
-where $\sigma_n$ is the kernel posterior uncertainty returned by \textsc{UpdateUncertainty} in Alg.~\ref{alg:sfe} and $\phi_s$ denotes the penultimate feature of the conditional flow vector field evaluated at the fixed flow-noise level $s$.
+where $\nu\!>\!0$ is regularization parameter. We use its posterior standard deviation as a feature-space uncertainty score.
 
-At the beginning of each expansion round, \textsc{UpdateUncertainty} fits the verifier uncertainty $\sigma_n$ from the current buffer $\mathcal B_n$ (line~3). Within the parallel rollouts, at each replanning step $k$, SFE self-generates a finite batch of actions from the current CFM policy using the verifier uncertainty~\eqref{eq:importancesampling} (lines~5--7). The verifier $v_{\gamma_k}$, defined by the finite-horizon DCBF conditions in Def.~\ref{def:verifier}, separates these queried actions $\hat{\mathbf u}^{(j)}$ into valid (\textit{i.e.,} $j\in\mathcal J_k^+$) and invalid sets, and adds both sets to $\mathcal D_n$ (lines~8--9). If no valid action exists, the rollout restarts (line~10).
-The execution cost \(C\) ranks valid action candidates, from which the first action with minimum cost is executed \footnote{With the shared execution cost $\gamma$ affects the action through the admissible set $\mathcal J_k^+$ over which the importance sampling is performed.}, while one can set this cost as expert actions \cite{ross2011reduction} or restrict execution to a safe admissible action set \cite{alshiekh2018safe}. 
-At each expansion round, we repeat this data acquisition until we gather $P$ successful trajectories (lines~13--14). Both valid and invalid sets are then added to the buffer through \textsc{UpdateBuffer}, from which \textsc{UpdateUncertainty} constructs $\sigma_{n+1}$ in the next round (line~15). Finally, we select the executed verifier-positive actions uniformly over $\gamma$ and successful trajectories, and regress the CFM loss~\eqref{eq:cfm-loss} using these valid actions in \textsc{UpdateCFM} (line~16).
+%At the beginning of each expansion round, \textsc{UpdateUncertainty} fits the verifier uncertainty $\sigma_n$ from the current buffer $\mathcal B_n$ 
+At each replanning step $k$, SFE self-generates a batch of actions from the current CFM policy using the GP posterior uncertainty $\sigma_n$ in ~\eqref{eq:importancesampling} within the parallel rollouts. The verifier $v_{\gamma_k}$, defined by the finite-horizon DCBF conditions in Def.~\ref{def:verifier}, separates these queried actions $\hat{\mathbf u}^{(j)}$ into valid (\textit{i.e.,} $j\in\mathcal J_k^+$) and invalid sets, and adds both sets to $\mathcal D_n$. If no valid action exists, the rollout restarts.
+
+The execution cost \(C\) ranks valid action candidates, from which the first action with minimum cost is executed~\footnote{One can set this cost as expert actions \cite{ross2011reduction} or restrict execution to a safe admissible action set \cite{alshiekh2018safe}.}. Even when $C$ is shared across, queried actions depend on $\gamma$ through the admissible set $\mathcal J_k^+$, thereby preserving the semantics of $\gamma$ (\textit{i.e.,} safety--performance tradeoff) through policy expansion. 
+
+We repeat this data acquisition until we gather $P$ successful trajectories. Both valid and invalid sets are then added to the buffer through \textsc{UpdateBuffer}, from which \textsc{UpdateUncertainty} constructs $\sigma_{n+1}$ in the next round. Finally, \textsc{UpdateCFM} uses hierarchical sampling~\cite{idrissi2022simple} among valid queried actions from $\mathcal D_n^+$ uniformly over $\gamma$ and successful trajectories, and regresses the CFM loss~\eqref{eq:cfm-loss} on these uncertainty-guided data.
  
 Because the buffer \(\mathcal B_n\) pools observations from finite contexts at each round, \(\sigma_n\) may prioritize an action due to novelty in unrelated contexts. However, no finite buffer can cover the space of planning contexts--the same issues that have arisen that make conditional generative planners struggle to generalize to OOD environments without retraining \cite{ye2024efficient, dai2025safefm}. We therefore use the buffer only as an acquisition heuristic to actively explore unvisited modes \cite{de2026active}, while it can affect the query but not validity.
 %, so every selected candidate is re-evaluated by \(v_\gamma(\hat{\mathbf u};\o)\) under the current context, so buffering finite samples can affect the query but not validity.
 
-\subsection{Safe Flow Expansion under OOD Shift}
 \begin{figure}[t]
 \centering
     \includegraphics[width=0.8\linewidth]{images/validity_v1.pdf}
@@ -548,6 +555,7 @@ Because the buffer \(\mathcal B_n\) pools observations from finite contexts at e
 \end{figure}
 
 \section{Experiments and Discussion}
+
 \begin{figure*}[t]
     \centering
     \vspace{-5.0mm}
@@ -557,13 +565,17 @@ Because the buffer \(\mathcal B_n\) pools observations from finite contexts at e
     \vspace{-\baselineskip}
     \label{fig:coverage}
 \end{figure*}
-We evaluate SFE in two 2D simulations, a 3D quadrotor simulation, and a hardware flight experiment
+We evaluate SFE in two 2D simulations, a 3D quadrotor simulation, and a hardware flight experiment.
 % , covering both adaptation to a fixed OOD setting and generalization to unseen configurations.
 \subsection{Evaluation Protocol and Implementation}
 \noindent\textbf{Evaluation protocol.}
 % \noindent \textbf{Train and test data details}
 % The specific training and test configurations are as follows:
-MPPI-DCBF generates all pretraining data under 2D and 3D double-integrator dynamics and a sampling time of $\Delta t = 0.1s$. Across four tasks, we structure the evaluation into three phases: initial in-distribution training, SFE (Alg.~\ref{alg:sfe}) in OOD environments, and final OOD testing, with the start, goal, and dynamics fixed. In \emph{configuration-specific adaptation}, expansion and evaluation use the same OOD obstacle configuration (2D cluttered environment and 3D single-sphere environment). In \emph{cross-configuration OOD generalization}, evaluation uses independently sampled OOD configurations that are not used during expansion (2D dynamic-pedestrian environment and the 3D cluttered environment). To account for the varying difficulty of the four tasks, we use a task-specific number $P$ of successful trajectories, fixed across rounds. After each expansion round $n$, we evaluate the expanded model $\theta_n$ independently with 16 function evaluations (NFE) on 100 test configurations per task and $\gamma$. SFE generates a single ($J\!=\!1$) control sequence per replanning step, where the computational and behavioral effects of larger $J$ are reported in Fig.~\ref{fig:coverage}(b) and Fig.~\ref{fig:tradeoff}, respectively. Data generation and training used an NVIDIA H100 NVL GPU, all online tests used an NVIDIA RTX 4060 Ti GPU.
+MPPI-DCBF generates all pretraining data under 2D and 3D double-integrator dynamics and a sampling time of $\Delta t = 0.1s$. Across four tasks, we structure the evaluation into three phases: initial in-distribution training, SFE (Alg.~\ref{alg:sfe}) in OOD environments, and final OOD testing, with the start, goal, and dynamics fixed. 
+
+In \emph{configuration-specific adaptation}, expansion and evaluation use the same OOD obstacle configuration (2D cluttered environment and 3D single-sphere environment). In \emph{cross-configuration OOD generalization}, evaluation uses independently sampled OOD configurations that are not used during expansion (2D dynamic-pedestrian environment and the 3D cluttered environment). To account for the varying difficulty of the four tasks, we use a task-specific number $P$ of successful trajectories, fixed across rounds. After each expansion round $n$, we independently evaluate $\theta_n$ with a 16-step ODE solver on 100 test rollouts for each task and value of $\gamma$.
+
+Data generation and training used an NVIDIA H100 NVL GPU, all online tests used an NVIDIA RTX 4060 Ti GPU.
 
 
 \noindent \textbf{Task configurations:}
@@ -572,10 +584,11 @@ In the \emph{2D cluttered environment}, The robot starts at \((0.3,0.3)\) and na
 In the \emph{2D dynamic-pedestrian environment}, the robot starts at \((0,0)\) and moves to \((6,6)\), with the simulated pedestrian environment modeled by the social force model~\cite{helbing1995social}, where each pedestrian is a modeled reactive dynamical system whose acceleration exponentially grows as agents approach. The CFM model is pretrained on an MPPI-DCBF policy in distribution with 20 pedestrians moving at \(0.5\!-\!1.0\,\mathrm{m/s}\), whereas evaluation uses 40 pedestrians moving at \(1.0\!-\!2.0\,\mathrm{m/s}\). In these challenging dynamic tasks, the policy conditions on the 10-step history of local observations $h^\text{poly}$, unlike other tasks. We tested this to capture how SFE can learn highly reactive behaviors under dynamic environments.
 % 10 time steps, 32 angular bins, and 100 radial bins.
 
-For the \emph{3D hardware environments}, we deploy online 3D motion planning on a \textit{Crazyflie} quadrotor. The robot starts at \((-2.5,1.5,0.9)\) to \((0.7,-1.5,0.9)\) in a \(4\,\mathrm{m}\times4\,\mathrm{m}\times1.5\,\mathrm{m}\) taskspace. For both single-sphere and cluttered environments, the CFM model is pretrained in environments with $4-8$ randomly positioned cylinder obstacles within the taskspace range. In the former configuration, a sphere is placed at the midpoint between the start and the goal; in the latter, it uses $6$ independent randomized spheres. For the mode coverage test (Fig.~\ref{fig:coverage}), we fixed the test configuration with $6$ spheres to compare the pretrained model, the expanded model with $5$ rounds, full rounds of $10$, and the baseline method. 
+For the \emph{3D hardware environments}, we deploy online 3D motion planning on a \textit{Crazyflie} quadrotor. The robot starts at \((-2.5,1.5,0.9)\) to \((0.7,-1.5,0.9)\) in a \(4\,\mathrm{m}\times4\,\mathrm{m}\times1.5\,\mathrm{m}\) taskspace. A Vicon motion-capture system provides quadrotor and obstacle poses at $50$ Hz. The policy replans at $10$ Hz, streaming the acceleration command at $100$ Hz as the feedforward component of a full-state setpoint.
 
-\noindent \textbf{Implementation details:} A Vicon motion-capture system provides quadrotor and obstacle poses at $50$ Hz. The policy replans at $10$ Hz using the measured position and a finite-difference velocity estimate, streaming the acceleration command at $100$ Hz as the feedforward component of a full-state setpoint.
+For both single-sphere and cluttered environments, the CFM model is pretrained in environments with $4-8$ randomly positioned cylinder obstacles. In the former configuration, a sphere is placed at the midpoint between the start and the goal; in the latter, it uses $6$ independent randomized spheres. For the mode coverage test (Fig.~\ref{fig:coverage}), we fixed the test configuration with $6$ spheres to compare the pretrained model, the expanded model with $5$ rounds, full rounds of $10$, and the baseline method. 
 
+\noindent \textbf{Implementation details:} 
 The base CFM model uses a flow-matching velocity network of a single MLP with 3 hidden layers, conditioned on the safety parameter and the context: the relative goal position, the velocity, and local observation at the current time step $h^\text{poly}$ (or history in pedestrian tasks) within a \(2\mathrm{m}\) sensing range encoded as a discretized grid. Specifically, we used a convolutional neural network (CNN) to preserve the radial resolution while downsampling the angular axes, then compress the result into a 64-dim observation token. Throughout our experiments, we used fixed values of $O=1$, $H=10$, and $A=1$.
 %At every replanning step, our CFM model generates \textit{a single} control sequence of horizon $H=10$ from the expanded model. 
 % For 3-D clutter, \(h^{\mathrm{poly}}\) is rasterized into a \(1\times32\times32\times100\) spherical grid—32 azimuth bins, 32 elevation bins, and 100 uniform 2-cm radial bins over the \(2\,\mathrm{m}\) sensing range.
@@ -586,28 +599,27 @@ At each SFE receding-horizon step, the CFM policy self-generates $K=32$ proposal
 At deployment, SFE generates \(J\) control sequences in parallel and evaluates them using the same cost structure used to select verified rollouts during expansion. Here \(J=1\) gives the default expanded model for the discussion of validity and coverage, and \(J=1\) is used for validity and mode discovery, whereas \(J>1\) is used in~\Cref{sec:tradeoff} to study its effect on safety and performance. 
 %, employing Adam with learning rate $1 \times 10^{-4}$, batch 64, and 4 inner steps. 
 
-\noindent \textbf{Baseline method} We compared against CFM-MPPI~\cite{mizuta2025unified}, which combines reward-guided flow generation with MPPI refinement. Given a base pre-trained vector field $\mathbf{v}^{\theta_{\text{0}}}(\mathbf{x}\!\mid\! \mathbf{o},\gamma)$, the guided velocity field is the local gradient ascent of the combined reward:
+\noindent \textbf{Baseline method} We compare against mode-selective CFM-MPPI~\cite{mizuta2025unified}, which combines reward-guided flow generation with local MPPI refinement.  Given a base pre-trained vector field $\mathbf{v}^{\theta_{\text{0}}}(\mathbf{x}\!\mid\! \mathbf{o},\gamma)$, the guided velocity field is the local gradient ascent of the combined reward:
 \begin{equation}
    \tilde{\mathbf{v}}^{\theta_{\text{0}}}(\mathbf{x}_\tau\!\mid\! \mathbf{o},\gamma)  = \mathbf{v}^{\theta_{\text{0}}}(\mathbf{x}_\tau\!\mid\! \mathbf{o},\gamma) \;+\; \eta \nabla_{\mathbf{z}_1}R(\mathbf{x},\mathbf{z}_1),
    \label{eq:cfm-mppi_vectorfield}
 \end{equation}
 The guided policy locally increases the reward that is designed to encourage both performance and safety
 \begin{equation}
-    R(\mathbf{x},\mathbf{\hat u}) = \sum_{k=0}^{H-1} w_\text{s} r_\text{s}(\mathbf{x},\mathbf{\hat u}) + w_\text{g} r_\text{g} (\mathbf{x},\mathbf{\hat u}), 
+    R(\mathbf{x},\mathbf{\hat u}) = \sum_{k=0}^{H-1} w_\text{s} r_\text{s}(\mathbf{x},\mathbf{\hat u}) + w_\text{g} r_\text{g} (\mathbf{x},\mathbf{\hat u}),
     \label{eq:cfm-mppi_guidance}
 \end{equation}
 where $w_\text{s}, w_\text{g}$ are scalar weights. The safety reward term $r_\text{s}(\mathbf{x},\mathbf{\hat u})$ is defined to penalize violations of the CBF condition~\cite[Eq. 6]{mizuta2025unified}.
-
-We implement the mode-selective variant, the strongest configuration they report: at each receding-horizon step, CFM-MPPI generates $J=$32 guided control sequences from the same pretrained model used for expansion. The $8$ lowest-cost priors were perturbed $M=$32 times with Gaussian noise,
+At each replanning step, CFM-MPPI generates $J=32$ guided priors, refines the eight lowest-cost priors using $M=32$ Gaussian perturbations each, and executes the first control of the lowest-cost refined sequence.
+%We implement the mode-selective variant, the strongest configuration they report: at each receding-horizon step, CFM-MPPI generates $J=$32 guided control sequences from the same pretrained model used for expansion. The $8$ lowest-cost priors were perturbed $M=$32 times with Gaussian noise,
 %, giving $256$ candidates
-and averaging with MPPI weights produces $8$ refined control sequences from which the minimum-cost action is executed. The method then warm-starts the next replan at flow time $t=0.75$. For each task, we evaluated various combinations of the scalar weights and selected the pair that provided the best trade-off between safety (collision rate) and task performance (time-to-goal).
+%and averaging with MPPI weights produces $8$ refined control sequences from which the minimum-cost action is executed.
+It warm-starts the next replan at flow time $t=0.75$. For each task, we evaluated various combinations of the scalar weights and selected the pair that provided the best trade-off between safety (collision rate) and task performance (time-to-goal).
 
-\noindent\textbf{Cross-task validity.}
-Fig.~\ref{fig:validity} reports validity over ten expansion rounds for the two configuration-specific adaptation tasks and the two cross-configuration generalization tasks. Validity is the fraction of executed actions for which~\eqref{eq:socp} is feasible for every sensed obstacle. Colored curves correspond to different values of $\gamma$, the black curve gives their average, and the dashed line gives the pretrained average. Across the four OOD environments, expansion increases the average validity relative to the pretrained policy. 
 % In the fixed 3D single-sphere environment, validity approaches one for every tested $\gamma$ after all expansion rounds.
-
+\subsection{OOD adaptation and generalization}
 \noindent\textbf{Configuration-specific adaptation.}
-Fig.~\ref{fig:2d_cluttered} isolates the 2D adaptation setting. We replaced central obstacles with one large obstacle that blocks the short paths represented in the demonstrations, so reaching the goal requires long-horizon planning. At both tested values of $w_{\mathrm{s}}$, the baseline method does not reliably recover this behavior, whereas SFE learns collision-free paths around the obstacle. The resulting closed-loop behavior indicates that expansion has shifted the policy distribution toward verified, goal-reaching actions rather than relying on a larger deployment-time candidate set.
+Fig.~\ref{fig:2d_cluttered} shows the 2D adaptation setting. We replaced central obstacles with one large obstacle that blocks the short paths represented in the demonstrations, so reaching the goal requires long-horizon planning. At both tested values of $w_{\mathrm{s}}$, the baseline method does not reliably recover this behavior, whereas SFE learns collision-free paths around the obstacle. The resulting closed-loop behavior indicates that expansion has shifted the policy distribution toward verified, goal-reaching actions rather than relying on a larger deployment-time candidate set.
 
 The 3D single-sphere task provides a controlled adaptation setting for the uncertainty-weighted sampling~\eqref{eq:importancesampling}. Fig.~\ref{fig:beta} compares the expansion setting $\beta=0.1$ with lower uncertainty weighting at $\beta=1.0$ and standard sampling at $\beta\to\infty$, while holding the remaining SFE training loop and the number of expansion rounds fixed. Smaller $\beta$ places more weight on uncertain actions and recovers more of the above, below, left, and right modes.
 
@@ -615,8 +627,13 @@ The 3D single-sphere task provides a controlled adaptation setting for the uncer
 For the dynamic pedestrian environments, we use $(K,B)=(64,32)$ to efficiently acquire valid actions. The verifier uses the currently observed obstacle geometry over the prediction horizon and therefore certifies finite-horizon validity only with respect to that frozen scene. We use a constant-velocity model of the pedestrians only in the execution cost to favor valid action candidates that anticipate future collisions; collision avoidance against moving pedestrians otherwise relies empirically on receding-horizon replanning.
 
 % We demonstrated that Safe Flow Expansion effectively breaks demonstration bias and discovers novel safe behaviors in OOD obstacle geometries.
-For 3D hardware experiments, the MPPI-DCBF demonstrations are collected among vertical cylinders and are concentrated on planar lateral modes. The same bias is illustrated for the single-sphere setting in Fig.~\ref{fig:hero}(C). In the unseen cluttered environment, the pretrained CFM consequently remains close to the demonstration altitude, as shown by the two left columns of Fig.~\ref{fig:coverage}(a). 
-However, as SFE iteratively updates valid OOD actions back into training, the policy discovers novel lateral, over, and under modes absent from the pretraining data across the expansion rounds (second to fourth columns in Fig.~\ref{fig:coverage}(a)). The baseline method frequently collides, where the local guidance leads the robot toward the free space (\textit{e.g.,} over and under the balls) but the pretrained base flow $\mathbf{v}^{\theta_{\text{0}}}$ in~\eqref{eq:cfm-mppi_vectorfield} has a generable set that lacks enough probability mass to recover safety. In contrast, SFE shifts probability mass toward fundamentally new safe modes trained offline.
+For 3D hardware experiments, MPPI-DCBF demonstrations collected among vertical cylinders are dominated by planar lateral motion. The same bias is illustrated for the single-sphere setting in Fig.~\ref{fig:hero}(C). In the unseen cluttered environment, the pretrained CFM consequently remains close to the demonstration altitude, as shown by the two left columns of Fig.~\ref{fig:coverage}(a). 
+SFE progressively broadens the policy to diverse lateral trajectories and new modes (second to fourth columns in Fig.~\ref{fig:coverage}(a), described as over and under). The CFM-MPPI frequently collides, where the local guidance leads the robot toward the free space (\textit{e.g.,} over and under the balls) but the pretrained base flow $\mathbf{v}^{\theta_{\text{0}}}$ in~\eqref{eq:cfm-mppi_vectorfield} has a generable set that lacks enough probability mass to recover safety. In contrast, SFE shifts probability mass toward fundamentally new safe modes trained offline.
+
+\subsection{Validity}
+Fig.~\ref{fig:validity} reports validity over ten expansion rounds for the two configuration-specific adaptation tasks and the two cross-configuration generalization tasks. Across the four OOD environments, expansion increases the average validity relative to the pretrained policy. 
+The higher validity observed at larger $\gamma$ at test time across tasks is consistent with~\Cref{prop:gamma-effect}, as the relaxed verifier condition enlarges the set of actions certified as valid.
+% Validity is the fraction of executed actions for which~\eqref{eq:socp} is feasible for every sensed obstacle. Colored curves correspond to different values of $\gamma$, the black curve gives their average, and the dashed line gives the pretrained average. 
 
 \subsection{Computation}
 \noindent \textbf{Offline expansion.}
@@ -656,8 +673,8 @@ Cost-based mode selection over \(J\) actions adds a fixed (\(\sim 6\mathrm{ms}\)
     % TODO change it to .pdf before submission:)
     \vspace{-7.0mm}
     \caption{\textbf{Safety--performance trade-off under a shared safety parameter.} Two OOD generalization tasks compare the pretrained CFM, MPPI-DCBF, CFM-MPPI, and SFE at different values of $J$, the number of actions generated in parallel.
-    Markers show mean clearance and time-to-goal over 100 randomized OOD configurations with 95\% confidence intervals, and lines connect increasing $\gamma$ in one method.
-    Across both tasks, $\gamma$ modulates behavior from conservative to goal-directed for MPPI-DCBF and SFE, CFM-MPPI barely moves, and larger $J$ empirically shifts SFE toward higher clearance and lower time-to-goal.}
+    Markers show mean clearance and time to goal over 100 randomized OOD configurations with 95\% confidence intervals, and lines connect increasing $\gamma$ in one method.
+    Across both tasks, $\gamma$ modulates behavior from conservative to goal-directed for MPPI-DCBF and SFE, where CFM-MPPI barely moves, and larger $J$ empirically shifts SFE toward higher clearance and lower time to goal.}
     \label{fig:tradeoff}
     \vskip -0.3 true in 
 \end{figure}
