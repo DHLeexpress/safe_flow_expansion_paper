@@ -390,7 +390,7 @@ The remaining constraints fix the scale of the normal and impose the strictly po
     \centering
     \includegraphics[width=\linewidth]{images/demo_3d/beta.pdf}
     \vspace{-6.0mm}
-    \caption{Rollouts of the expanded policy in the 3D single sphere task after $N$ expansion rounds, run with same parameters but for uncertainty weights $\beta=0.1$, $\beta=1.0$, and $\beta\to\infty$ (standard sampling at the current policy, $\hat{\mathbf u} \sim p_1^{\theta_n}$). Colors show the four modes: above, below, left, and right. Smaller $\beta$ puts more weight on uncertain actions and discovers new trajectories.}
+    \caption{Rollouts of the expanded policy in the 3D single sphere task after $N$ expansion rounds, run with same parameters but for the $\beta=0.1$, $\beta=1.0$, and $\beta\to\infty$ (standard sampling at the current policy, $\hat{\mathbf u} \sim p_1^{\theta_n}$). Colors show the four modes: above, below, left, and right. Smaller $\beta$ puts more weight on uncertain actions and discovers new trajectories.}
     \label{fig:beta}
     \vspace{-\baselineskip}
 \end{figure}
@@ -520,7 +520,7 @@ p_1^{\theta_n}(\hat{\mathbf u}\mid\o,\gamma)
 ,
 \label{eq:importancesampling}
 \end{equation}
-where $Z_n(\o,\gamma)$ is the normalizing constant \footnote{Define \(
+where $\beta$ is the parameter that controls the trade-off between exploration and the prior, $Z_n(\o,\gamma)$ is the normalizing constant \footnote{Define \(
 Z_n(\o,\gamma)\!=\!\int_{\mathcal U^H}
 p_1^{\theta_n}(\mathbf u\!\mid\!\o,\!\gamma)\exp\!\left(
 \sigma_n\!\left(\phi_s(\mathbf u;\o,\!\gamma)\right)/\beta
@@ -571,9 +571,7 @@ We evaluate SFE in two 2D simulations, a 3D quadrotor simulation, and a hardware
 % The specific training and test configurations are as follows:
 MPPI-DCBF generates all pretraining data under 2D and 3D double-integrator dynamics and a sampling time of $\Delta t = 0.1s$. Across four tasks, we structure the evaluation into three phases: initial in-distribution training, SFE (Alg.~\ref{alg:sfe}) in OOD environments, and final OOD testing, with the start, goal, and dynamics fixed. 
 
-In \emph{configuration-specific adaptation}, expansion and evaluation use the same OOD obstacle configuration (2D cluttered environment and 3D single-sphere environment). In \emph{cross-configuration OOD generalization}, evaluation uses independently sampled OOD configurations that are not used during expansion (2D dynamic-pedestrian environment and the 3D cluttered environment). To account for the varying difficulty of the four tasks, we use a task-specific number $P$ of successful trajectories, fixed across rounds. After each expansion round $n$, we independently evaluate $\theta_n$ with a 16-step ODE solver on 100 test rollouts for each task and value of $\gamma$.
-
-Data generation and training used an NVIDIA H100 NVL GPU, all online tests used an NVIDIA RTX 4060 Ti GPU.
+In \emph{configuration-specific adaptation}, expansion and evaluation use the same OOD obstacle configuration (2D cluttered environment and 3D single-sphere environment). In \emph{cross-configuration OOD generalization}, evaluation uses independently sampled OOD configurations that are not used during expansion (2D dynamic-pedestrian environment and the 3D cluttered environment). To account for the varying difficulty of the four tasks, we use a task-specific number $P$ of successful trajectories, fixed across rounds. After each expansion round $n$, we independently evaluate $\theta_n$ with a 16-step ODE solver on 100 test rollouts for each task and value of $\gamma$. Data generation and training used an NVIDIA H100 NVL GPU, all online tests used an NVIDIA RTX 4060 Ti GPU.
 
 
 \noindent \textbf{Task configurations:}
@@ -618,24 +616,21 @@ At each replanning step, CFM-MPPI generates $J=32$ guided priors, refines the ei
 %and averaging with MPPI weights produces $8$ refined control sequences from which the minimum-cost action is executed.
 It warm-starts the next replan at flow time $t=0.75$. For each task, we evaluated various combinations of the scalar weights and selected the pair that provided the best trade-off between safety (collision rate) and task performance (time-to-goal).
 
-% In the fixed 3D single-sphere environment, validity approaches one for every tested $\gamma$ after all expansion rounds.
-\subsection{OOD adaptation and generalization}
-\noindent\textbf{Configuration-specific adaptation.}
-Fig.~\ref{fig:2d_cluttered} shows the 2D adaptation setting. We replaced central obstacles with one large obstacle that blocks the short paths represented in the demonstrations, so reaching the goal requires long-horizon planning. At both tested values of $w_{\mathrm{s}}$, the baseline method does not reliably recover this behavior, whereas SFE learns collision-free paths around the obstacle. The resulting closed-loop behavior indicates that expansion has shifted the policy distribution toward verified, goal-reaching actions rather than relying on a larger deployment-time candidate set.
-
-The 3D single-sphere task provides a controlled adaptation setting for the uncertainty-weighted sampling~\eqref{eq:importancesampling}. Fig.~\ref{fig:beta} compares the expansion setting $\beta=0.1$ with lower uncertainty weighting at $\beta=1.0$ and standard sampling at $\beta\to\infty$, while holding the remaining SFE training loop and the number of expansion rounds fixed. Smaller $\beta$ places more weight on uncertain actions and recovers more of the above, below, left, and right modes.
-
-\noindent\textbf{Cross-configuration OOD generalization.}
-
-
-% We demonstrated that Safe Flow Expansion effectively breaks demonstration bias and discovers novel safe behaviors in OOD obstacle geometries.
-For 3D hardware experiments, MPPI-DCBF demonstrations collected among vertical cylinders are dominated by planar lateral motion. The same bias is illustrated for the single-sphere setting in Fig.~\ref{fig:hero}(C). In the unseen cluttered environment, the pretrained CFM consequently remains close to the demonstration altitude, as shown by the two left columns of Fig.~\ref{fig:coverage}(a). 
-SFE progressively broadens the policy to diverse lateral trajectories and new modes (second to fourth columns in Fig.~\ref{fig:coverage}(a), described as over and under). The CFM-MPPI frequently collides, where the local guidance leads the robot toward the free space (\textit{e.g.,} over and under the balls) but the pretrained CFM model has a generable set that lacks enough probability mass to recover safety. In contrast, SFE shifts probability mass toward fundamentally new safe modes trained offline.
+Having presented the implementation details and baseline configurations, we now present the main results evaluating the generalization capabilities of SFE in OOD scenarios.
 
 \subsection{Validity}
 Fig.~\ref{fig:validity} reports validity over ten expansion rounds for the two configuration-specific adaptation tasks and the two cross-configuration generalization tasks. Across the four OOD environments, expansion increases the average validity relative to the pretrained policy. 
 The higher validity observed at larger $\gamma$ at test time across tasks is consistent with~\Cref{prop:gamma-effect}, as the relaxed verifier condition enlarges the set of actions certified as valid.
 % Validity is the fraction of executed actions for which~\eqref{eq:socp} is feasible for every sensed obstacle. Colored curves correspond to different values of $\gamma$, the black curve gives their average, and the dashed line gives the pretrained average. 
+
+\subsection{OOD adaptation and generalization}
+% Please write in following order: task - Figure - takeaway - comparison
+% \noindent\textbf{Configuration-specific adaptation.}
+The 2D cluttered simulation result in Fig.~\ref{fig:2d_cluttered} shows that the closed-loop behavior indicates expansion shifted the policy distribution toward verified, goal-reaching actions rather than relying on a larger deployment-time candidate set in the 2D adaptation setting. We replaced central obstacles with one large obstacle that blocks the short paths represented in the demonstrations, so reaching the goal requires long-horizon planning. At both tested values of $w_{\mathrm{s}}$, the baseline method does not reliably recover this behavior, whereas SFE learns collision-free paths around the obstacle.
+
+The 3D single sphere simulation result in Fig.~\ref{fig:beta} demonstrates that $\beta$ controls the exploration and the adherence to the prior during the sampling process~\eqref{eq:importancesampling}. Our SFE setting is $\beta=0.1$, and we compared it against $\beta=1.0$ and standard sampling at $\beta\to\infty$, while holding the remaining SFE training loop and the number of expansion rounds fixed. Smaller $\beta$ places more weight on uncertain actions and recovers more of the above, below, left, and right modes.
+
+For 3D hardware experiments, we demonstrated that Safe Flow Expansion effectively breaks demonstration bias and discovers novel safe behaviors in OOD obstacle geometries, as shown in Fig.~\ref{fig:coverage}(a). MPPI-DCBF demonstrations collected among vertical cylinders are dominated by planar lateral motion (The same bias is illustrated in Fig.~\ref{fig:hero}(C)). In the unseen cluttered environment, the pretrained CFM consequently remains close to the demonstration altitude. SFE progressively broadens the policy to diverse lateral trajectories and new modes (described as over and under in the figure). The CFM-MPPI frequently collides, where the local guidance leads the robot toward the free space but the pretrained CFM model has a generable set that lacks enough probability mass to recover safety. In contrast, SFE shifts probability mass toward fundamentally new safe modes trained offline.
 
 \subsection{Computation}
 \noindent \textbf{Offline expansion.}
