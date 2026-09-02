@@ -273,7 +273,7 @@ J(\mathbf{x}_{k:k+H\mid k},
 \end{subequations}
 
 Direct optimization with a non-convex $h$ does not generally guarantee recursive feasibility for this problem and often makes real-time implementation computationally intractable~\cite{rawlings2020model}. 
-We therefore keep a convex inner approximation of the free space and impose that the evolution of $h$ follows the decay with respect to the horizon $(1-\gamma)^i$ rather than a fixed level.
+We therefore keep a convex inner approximation of the free space and impose, in a receding-horizon fashion, that the evolution of $h$ follows the decay with respect to the horizon $(1-\gamma)^i$ rather than a fixed level.
 From the view of set invariance, $\gamma$ modulates the trade-off between \textit{safety and feasibility}~\cite{zeng2021enhancing}. For example, a small $\gamma$ restricts the safety function to higher values, at the cost of reduced feasibility.
 % \begin{remark} In order to prove $h$ is a valid DCBF, it is necessary to find a pointwise set of control values at any given state that is non-empty, with corresponding $\gamma$. To be compatible with the averaging in MPPI, we assumed that all rollouts \eqref{eq:mppi_rollout} assigned nonzero MPPI weight after rejection based on \eqref{eq:dtcbf}. In practice, we trained the generative policy only on feasible action sets.
 % \end{remark}
