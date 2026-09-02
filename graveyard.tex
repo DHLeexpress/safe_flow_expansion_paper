@@ -1,3 +1,13 @@
+% Sampling-based predictive control (SBPC) (e.g., model predictive path integral control (MPPI)) efficiently predicts receding-horizon actions.  However, the safety of individual MPPI rollouts do not guarantee a safe weighted average.  Moreover, policies pretrained on safe demonstrations may poorly represent safe behaviors in out-of-distribution (OOD) deployments. This paper introduces new methods to ensure safety in SBPC and to guarantee a conditional lower bound on the probability of generating a safe action.
+% We address sampling-based safety through a discrete-time control barrier function (DCBF) condition, enforced conservatively to produce certified safe data and to verify new behaviors.
+% We first introduce MPPI-DCBF, which rejects unsafe samples within a convex safe region before averaging and preserves the executed next-state safety certificate under control-affine dynamics and the full predicted-horizon certificate for linear time-invariant systems. 
+% Building on this certified planner, we introduce an offline framework, \textit{Safe Flow Expansion}, that iteratively expands the range of safe actions of the learned Conditional Flow Matching (CFM) model through uncertainty-guided self-generation, verification, and update.
+% In unseen 2D and 3D environments, we show that our framework improves safety and mode coverage with much lower replanning latency than baseline methods, while tuning safety levels via a single DCBF parameter.
+
+
+%We analyze the safety and feasibility properties of MPPI-DCBF via a single parameter $\gamma$ that modulates receding-horizon DCBF conditions.
+% Building on this certified planner, we then formulate an optimization problem that verifies an arbitrary CFM policy against the same multi-step safety conditions. \textit{Safe Flow Expansion} is an offline framework to expand the range of safe actions that the CFM policy can generate by a verification and update process while retaining the multi-step safety conditions on $\gamma$.
+%does not generally imply the safety of their weighted average.  
 
 
 % \subsection{2D Cluttered and Dynamic Environment: Simulation}
