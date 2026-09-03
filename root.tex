@@ -199,7 +199,7 @@ A function $h$ is a discrete‐time control barrier function (DCBF) associated w
 \end{equation}
 If \eqref{eq:dtcbf} holds at every step, then \(h(\x_k)\!\ge\!(1-\gamma)^{k}\,h(\x_0)\), so the fixed set $\mathcal{C}$ is forward invariant~\cite{ames2014cbf,agrawal2017discrete}.
 
-Let \(\piq:\mathbb R^{n_x} \to \mathbb R^d\) be the linear projection that maps states into the robot positions, \(\piq(\xki)=\qki, i=1,\cdots,H\). So the sets below are convex in the state, and linearize otherwise. For a convex configuration-space obstacle $j$, with closest boundary point $\p_j$ to the current position $\qk$and outward normal $\n_j$, the supporting hyperplane there gives the affine barrier function
+Let \(\piq:\mathbb R^{n_x} \to \mathbb R^d\) be the linear projection that maps states into the robot positions, \(\piq(\xki)=\qki, i=1,\cdots,H\). For a convex configuration-space obstacle $j$, with closest boundary point $\p_j$ to the current position $\qk$and outward normal $\n_j$, the supporting hyperplane there gives the affine barrier function
 \setlength{\belowdisplayskip}{3pt}
 \setlength{\belowdisplayshortskip}{3pt}
 \begin{equation}
@@ -218,7 +218,7 @@ h_j^{\mathrm{aff}}(\xki;\xk) \ge (1-\gamma)^i. \quad i = 1, \ldots, H.
 \end{equation}
 It applies to any convex obstacle through its closest boundary point and outward normal, and to non-convex ones through a convex hull or decomposition.
 
-\noindent \textbf{Nominal Polytope for MPPI safety.} A \textit{nominal polytope} generalize this to multiple obstacles. Let $\mathcal O(\xk)$ index the obstacles observed at $\xk$. We define the nominal ego-centric (\textit{i.e.}, defined as a function of $\xk$) safety function
+\noindent \textbf{Nominal Polytope for MPPI safety.} A \textit{nominal polytope} generalize this to multiple obstacles. Let $\mathcal O(\xk)$ index the obstacles observed at $\xk$. We define the ego-centric (\textit{i.e.}, defined as a function of $\xk$) safety function
 \begin{equation}
     h^{\mathrm{poly}}(\x;\xk) = \min_{j\in\mathcal O(\xk)} h^{\mathrm{aff}}_j(\x;\x_{k\mid k})
 \end{equation}
@@ -226,8 +226,14 @@ Accordingly, the safe set for each horizon,
 \begin{equation}
 \mathcal{C}^{\mathrm{poly}}_i=\{\mathbf{x} \in \mathbb{R}^{n_x} \mid h^{\mathrm{poly}}(\x;\xk)\ge (1-\gamma)^i\},\label{eq:poly_safeset}
 \end{equation}
-Each $\mathcal C_i^{\mathrm{poly}}$ is a convex inner approximation set of the nonconvex free space, an intersection of half-spaces separating the robot from obstacles. These sets are nested, \(\mathcal C_1^{\mathrm{poly}}\subseteq\cdots\subseteq \mathcal C_H^{\mathrm{poly}}\), and rebuilt at each replanning step.
-Since $h_j^{\mathrm{aff}}\geq0$ places $\q$ beyond the supporting hyperplane at $\p_j$, every state in $\mathcal{C}^{\mathrm{poly}}_i$ has its position outside the interior of every sensed obstacle. A certified trajectory is therefore collision-free in the sensed scene. We claim neither forward invariance of these time-varying sets nor recursive feasibility, relying on the condition below. Assumption~\ref{assumption_1} only keeps the set of certified trajectories non-empty at each replanning state.
+We define this safe set $\mathcal{C}^{\mathrm{poly}}_i$ as the nominal polytope, and it is a convex inner approximation set of the nonconvex free space, an intersection of half-spaces separating the robot from obstacles. 
+% Furthermore, these sets are nested, \(\mathcal C_1^{\mathrm{poly}}\subseteq\cdots\subseteq \mathcal C_H^{\mathrm{poly}}\), and rebuilt at each replanning step.
+Because $(1-\gamma)^i\geq 0$, any $\x\in\mathcal{C}^{\mathrm{poly}}_i$ satisfies
+$h_j^{\mathrm{aff}}(\x;\xk)\geq 0$ for every $j\in\mathcal O(\xk)$.
+For each obstacle, this inequality places $\q$ in the obstacle-free half-space
+bounded by the supporting hyperplane at $\p_j$ 
+% We claim neither forward invariance of these time-varying sets nor recursive feasibility, relying on the condition below. 
+Assumption~\ref{assumption_1} ensures that the set of certified trajectories is non-empty at each replanning state.
 % Furthermore, it is constructed as a bounded set by incorporating bounding faces within a sensing range, which will be discussed further.
 % While the proper design of terminal ingredients (\textit{i.e.,} a terminal set and cost) can formally guarantee recursive feasibility in traditional MPC, the non-convex nature of the resulting optimization problem often makes real-time implementation computationally intractable \cite{rawlings2020model}. SBPC methods such as MPPI face similar challenges. Rather than proving recursive feasibility, our approach ensures safety by enforcing DCBF constraints at each time step, which relies on the weaker but more practical condition of pointwise feasibility, formalized in the following assumption.
 
@@ -238,7 +244,7 @@ there exists a control sequence\footnote{Assumption~\ref{assumption_1} is the co
 $\{ \uki \}_{i=0}^{H-1}\in\mathcal U^H$ such that the resulting trajectory $\{\xki\}_{i=1}^{H}$ lies within the sequence of safe sets defined in~\eqref{eq:poly_safeset}, i.e., $\xki \in \mathcal{C}_i^{\mathrm{poly}}$, thus following condition is satisfied:
 \begin{equation}
 h^{\mathrm{poly}}(\xki;\xk)\ge(1-\gamma)^i,
-\quad i=1,\ldots,H.\label{eq:nominalpolytope}
+\quad i=1,\ldots,H.\label{eq:feasibility}
 \end{equation}
 \end{assumption}
 
@@ -247,7 +253,7 @@ h^{\mathrm{poly}}(\xki;\xk)\ge(1-\gamma)^i,
 
 \section{Problem Definition}
 \label{sec:problemdefinition}
-We pose safe planning as a constrained optimization problem. For any ego-centric safety function, $h(\cdot;\xk)$, whose nonnegative superlevel set lies in free space, frozen over the horizon and normalized by $h(\xk;\xk)=1$: 
+We pose safe planning as a constrained optimization problem. For any ego-centric safety function, $h(\cdot;\xk)$, whose nonnegative superlevel set lies in free space, frozen over the horizon and, without loss of generality, normalized by $h(\xk;\xk)=1$: 
 %The formulation is \textit{agnostic} to that choice:
 
 \setlength{\abovedisplayskip}{2pt}
@@ -273,7 +279,7 @@ J(\mathbf{x}_{k:k+H\mid k},
 \end{subequations}
 
 Direct optimization with a non-convex $h$ does not generally guarantee recursive feasibility for this problem and often makes real-time implementation computationally intractable~\cite{rawlings2020model}. 
-We therefore keep a convex inner approximation of the free space and impose, in a receding-horizon fashion, that the evolution of $h$ follows the decay with respect to the horizon $(1-\gamma)^i$ rather than a fixed level.
+We therefore keep a convex inner approximation of the free space and impose, in a receding-horizon fashion, that the evolution of $h$ follows the decay $(1-\gamma)^i$ with respect to the horizon $i$ rather than a fixed level.
 From the view of set invariance, $\gamma$ modulates the trade-off between \textit{safety and feasibility}~\cite{zeng2021enhancing}. For example, a small $\gamma$ restricts the safety function to higher values, at the cost of reduced feasibility.
 % \begin{remark} In order to prove $h$ is a valid DCBF, it is necessary to find a pointwise set of control values at any given state that is non-empty, with corresponding $\gamma$. To be compatible with the averaging in MPPI, we assumed that all rollouts \eqref{eq:mppi_rollout} assigned nonzero MPPI weight after rejection based on \eqref{eq:dtcbf}. In practice, we trained the generative policy only on feasible action sets.
 % \end{remark}
@@ -295,17 +301,19 @@ We instantiate~\eqref{eq:problemdef} in three parts. MPPI-DCBF takes $h=h^\text{
 \subsection{MPPI-DCBF}
 \begin{figure}
     \centering
-    \includegraphics[width=0.8\linewidth]{images/graveyard/robotarm.pdf}
-    \vspace{-2.0mm}
-    \caption{\textcolor{blue}{TBD:} \textbf{MPPI-DCBF on a Franka FR3 among non-convex objects in simulation} 
+    \includegraphics[width=\linewidth]{images/robotarm_v1.pdf}
+    \vspace{-3.0mm}
+    \caption{\textbf{MPPI-DCBF on a Franka FR3 among non-convex objects in simulation} 
     \textbf{(a)} Executed end-effector paths for different $\gamma$
     \textbf{(b)} Minimum clearance between the body points and the objects over time. 
     \textbf{(c)} Body points on the hand with the closest points and supporting hyperplanes of nearby convex parts.
-    \textbf{(d)} The nominal polytope~\eqref{eq:nominalpolytope} of the end-effector point in task space, with resulting averaged rollouts after DCBF rejection.}
+    \textbf{(d)} The nominal polytope~\eqref{eq:poly_safeset} of the end-effector point in task space, with resulting averaged rollouts after DCBF rejection.}
     \label{fig:robotarm}
     \vskip -0.2 true in
 \end{figure}
-We propose MPPI with DCBF-based sample rejection (MPPI-DCBF), which enforces the safety specification~\eqref{eq:poly} with $h=h^\text{poly}$ inside the MPPI sampling step, which is designed to guarantee the forward invariance of the sequence of time-varying safe sets $\mathcal{C}_i^{\mathrm{poly}}$ defined in \eqref{eq:poly_safeset}. This is achieved by integrating the DCBF condition directly into the MPPI sampling step. We reject any sampled rollout that violates the condition; consequently, we compute the optimal control sequence \eqref{eq:mppi-update} as a convex combination of only rollouts certified to be safe. Under the pointwise feasibility assumption (Assumption.~\ref{assumption_1}), we can formally analyze the properties of the MPPI-DCBF averaging process.
+We propose MPPI with DCBF-based sample rejection (MPPI-DCBF), which enforces the safety specification~\eqref{eq:poly} with $h=h^\text{poly}$ inside the MPPI sampling step, which is designed to guarantee the forward invariance of the sequence of time-varying safe sets $\mathcal{C}_i^{\mathrm{poly}}$ defined in \eqref{eq:poly_safeset}. This is achieved by integrating the DCBF condition directly into the MPPI sampling step. It rejects every rollout that violates the condition, followed by the MPPI averaging process~\eqref{eq:mppi-update} as a convex combination of only rollouts certified to be safe~\footnote{In practice, if the planner accepts no rollouts, it reports infeasibility.}
+%or whose controls leave $\mathcal U$
+Under the pointwise feasibility assumption (Assumption.~\ref{assumption_1}), we can formally analyze the properties of the MPPI-DCBF averaging process.
 
 \begin{proposition} \label{prop:1}
     For the discrete-time control affine system \eqref{eq:affinesystem}, if all contributing rollouts $(m)$ satisfy $\mathbf{x}^{(m)}_{k+1\mid k} \in \mathcal{C}_1^{\mathrm{poly}}$, then the averaged state $\mathbf{x}^\star_{k+1|k}$ under the MPPI-DCBF control is also guaranteed to be in the safe set $\mathcal{C}_1^{\mathrm{poly}}$.
@@ -348,11 +356,12 @@ For the discrete LTI system \eqref{eq:lti} under the same pointwise feasibility 
 \subsection{Motion Planning in General Obstacle Worlds}
 \label{sec:futurework}
 
-Our framework assumes ball obstacles and a single body point, as is common in safety-critical planning~\cite{agrawal2017discrete}. For general motion planning classes, a convex obstacle still admits a supporting hyperplane at its closest boundary point, so the affine barrier function~\eqref{eq:aff_barrier} is unchanged~\cite{zhang2020optimization,deits2015computing}. Also, a non-convex obstacle can be modeled as a union of convex obstacles, $\mathcal O_j=\bigcup_{\ell=1}^{L_j}\mathcal O_{j,\ell}$. The robot may also carry several body points, as required in full-body safety~\cite{wilkinson2026full}. Let $\pi_c$ map the state to a body point $\q^{(c)}=\pi_c(\x)$, one of $N_c$ points sampled on the robot, linearized at the current state as 
+Our framework so far assumes circular obstacles and a single body point, as is common in safety-critical planning~\cite{agrawal2017discrete, mizuta2025unified}. We here show that our MPPI-DCBF can be extended to more general motion planning problems. For a convex obstacle, the affine barrier function~\eqref{eq:aff_barrier} can be easily defined to its closest boundary point~\cite{zhang2020optimization,deits2015computing}, thus the nominal polytope can be well defined. Moreover, a non-convex obstacle can be modeled as a union of convex components, a common modeling convention in physics-based simulation environments~\cite{todorov2012mujoco,liu2023libero}, as $\mathcal O_j=\bigcup_{\ell=1}^{L_j}\mathcal O_{j,\ell}$.
+The robot may also carry several body points, as required in full-body safety~\cite{wilkinson2026full}. Let $\pi_c$ map the state to a body point $\q^{(c)}=\pi_c(\x)$, with body Jacobian $J_c=\partial \pi_c/\partial \x \in \mathbb R^{3\times n}$. Each of the total $N_c$ points sampled on the robot, linearized at the current state as 
 \begin{equation}
-\pi_c(\x)\approx\q^{(c)}_{k\mid k}+J_c(\xk)(\x-\xk)
+\pi_c(\x)\approx\pi_c(\xk)+J_c(\xk)(\x-\xk)
 \end{equation}
-with body Jacobian $J_c$. Each pair of a body point and a part then contributes one affine barrier function, and the nominal safety function can be extended as
+Each pair of a body point and a component then contributes one affine barrier function, then nominal safety function can be extended as
 \begin{equation}
 h^{\mathrm{poly}}(\x;\xk)\!=\!\min_{c\le N_c}\min_{j\in\mathcal O(\xk)}\min_{\ell\le L_j}
 h^{\mathrm{aff}}_{j,\ell}\big(\pi_c(\x);\xk\big).
@@ -362,6 +371,7 @@ Taking a minimum of these affine functions keeps every $\mathcal C_i^{\mathrm{po
 
 As a preliminary study, we run MPPI-DCBF with extended nominal polytope~\eqref{eq:poly_multi} on a Franka FR3 arm in \emph{LIBERO}~\cite{liu2023libero}, a manipulation benchmark whose objects are composed of unions of convex box primitives. We use $N_c=183$ body points on the end effector, distal links, and fingers, a joint-velocity integrator with $\Delta t=0.08$\,s, with Jacobians computed once per replan. Proposition~\ref{prop:2} certifies the averaged plan for the linearized body points.
 %only, and an exact nonlinear recheck shrinks the horizon toward zero control when it fails. 
+We omit a 3-D visualization of~\eqref{eq:poly_multi} because, for a general articulated robot, the safe set is defined by constraints on multiple body points in the robot’s high-dimensional configuration space and cannot be faithfully represented in 3-D position space.
 Fig.~\ref{fig:robotarm} shows collision-free trajectories for all tested $\gamma$ with $H=10$ and $M=1024$ rollouts. The minimum clearance is smallest at $\gamma=1.0$ and largest at $\gamma=0.1$.
 
 \subsection{Multi-step Safety Verification}
@@ -390,7 +400,7 @@ Problem~\eqref{eq:socp} is a second-order cone program (SOCP), solved with Clara
 \aj^\top(\oj-\qk)-r_j\|\aj\|_2
 \ge m_j.
 \]
-The remaining constraints fix the scale of the normal and impose the strictly positive margin $m_{\min}\!>\!0$. With $(\aj^\star,m_j^\star)$ a solution for obstacle $j$. The resulting verifier polytope \footnote{For brevity, we abbreviate the \(H\) steps of predicted control sequence (or action) as $\{ \hat{\u}_{k+i\mid k}\}_{i=0}^{H-1}$ as \(\hat{\mathbf u}\). Also, we add auxiliary bounding faces around the sensing region so that $\mathcal P$ bounded (12  faces in Fig.~\ref{fig:pedestrian}(a)).} for a queried action is
+The remaining constraints fix the scale of the normal and impose the strictly positive margin $m_{\min}\!>\!0$. With $(\aj^\star,m_j^\star)$ a solution for obstacle $j$. The resulting verifier polytope \footnote{For brevity, we abbreviate the \(H\) steps of predicted control sequence (or action) as $\{ \hat{\u}_{k+i\mid k}\}_{i=0}^{H-1}$ as \(\hat{\mathbf u}\). Also, we augment both the nominal and verifier polytope constructions with auxiliary half-spaces that bound the sensing region so that $\mathcal P$ is bounded (12 faces in Fig.~\ref{fig:pedestrian}(a)).} for a queried action is
 \begin{equation}
 \mathcal P(\hat{\mathbf u};\o,\gamma):=\nspace{-10}\bigcap_{j\in\mathcal O(\xk)}\nspace{-10}\{
 \q\in\mathbb R^d:
@@ -567,7 +577,7 @@ Because the buffer \(\mathcal B_n\) pools observations from finite contexts at e
     \vspace{-5.0mm}
     \includegraphics[width=\textwidth]{images/demo_3d/fig_main_side.pdf}
     \vspace{-7.0mm}
-    \caption{\textbf{Safe Flow Expansion consistently increases mode coverage in an OOD obstacle geometry at a fraction of the replanning latency of online planners.} (a) Left: MPPI-DCBF demonstrations among vertical cylindrical in simulation. Remaining columns: Crazyflie hardware rollouts in the unseen sphere layout for the pretrained CFM, the policy after five expansion rounds, the SFE policy, and CFM-MPPI ($\gamma=0.3$ througout). SFE discovers new lateral, over, and under modes, and CFM-MPPI collides. (b) Mean per-step replanning time over 100 steps on an NVIDIA RTX 4060 Ti GPU. The blue segment is the overhead of DCBF sample rejection over vanilla MPPI (512 samples for both MPPI variants and 32 guided proposals for CFM-MPPI).}
+    \caption{\textbf{Safe Flow Expansion consistently increases mode coverage in an OOD obstacle geometry at a fraction of the replanning latency of online planners.} (a) Left: MPPI-DCBF demonstrations among vertical cylinders in simulation. Remaining columns: Crazyflie hardware rollouts in the unseen sphere layout for the pretrained CFM, the policy after five expansion rounds, the SFE policy, and CFM-MPPI ($\gamma=0.3$ throughout). SFE discovers new lateral, over, and under modes, and CFM-MPPI collides. (b) Mean per-step replanning time over 100 steps on an NVIDIA RTX 4060 Ti GPU. The blue segment is the overhead of DCBF sample rejection over vanilla MPPI (512 samples for both MPPI variants and 32 guided proposals for CFM-MPPI).}
     \vspace{-\baselineskip}
     \label{fig:coverage}
 \end{figure*}
@@ -589,7 +599,7 @@ To account for the varying difficulty of the four tasks, we use a task-specific 
 % In the \emph{2D dynamic-pedestrian environment}, the robot starts at \((0,0)\) and moves to \((6,6)\), with the simulated pedestrian environment modeled by the social force model~\cite{helbing1995social}, where each pedestrian is a modeled reactive dynamical system whose acceleration exponentially grows as agents approach. The CFM model is pretrained on an MPPI-DCBF policy in distribution with 20 pedestrians moving at \(0.5\!-\!1.0\,\mathrm{m/s}\), whereas evaluation uses 40 pedestrians moving at \(1.0\!-\!2.0\,\mathrm{m/s}\). In these challenging dynamic tasks, the policy conditions on the 10-step history of local observations $h^\text{poly}$, unlike other tasks. We tested this to capture how SFE can learn highly reactive behaviors under dynamic environments.
 % 10 time steps, 32 angular bins, and 100 radial bins.
 
-\emph{3D hardware environments}: online 3D motion planning on a \textit{Crazyflie} quadrotor. Start \((-2.5,1.5,0.9)\), goal \((0.7,-1.5,0.9)\), \(4\,\mathrm{m}\times4\,\mathrm{m}\times1.5\,\mathrm{m}\) taskspace. A Vicon motion-capture system provides quadrotor and obstacle poses at $50$ Hz. The policy replans at $10$ Hz and streams the acceleration command at $100$ Hz as the feedforward component of a full-state setpoint. Both single-sphere (Fig.~\ref{fig:hero}) and cluttered tasks (Fig.~\ref{fig:coverage}) pretrain among $4$ to $8$ randomly positioned cylinder obstacles, then test on one sphere at the start-goal mid point or on 6 randomized spheres. The mode discovery test fixes one layout and compares the pretrained model, 5 and 10 expansion rounds, and the baseline.
+\emph{3D hardware environments}: online 3D motion planning on a \textit{Crazyflie} quadrotor. Start \((-2.5,1.5,0.9)\), goal \((0.7,-1.5,0.9)\), \(4\,\mathrm{m}\times4\,\mathrm{m}\times1.5\,\mathrm{m}\) taskspace. A Vicon motion-capture system provides quadrotor and obstacle poses at $50$ Hz. The policy replans at $10$ Hz and streams the acceleration command at $100$ Hz as the feedforward component of a full-state setpoint. Both single-sphere (Fig.~\ref{fig:hero}) and cluttered tasks (Fig.~\ref{fig:coverage}) pretrain among $4$ to $8$ randomly positioned cylinder obstacles, then test on one sphere at the start-goal midpoint or on 6 randomized spheres. The mode discovery test fixes one layout and compares the pretrained model, 5 and 10 expansion rounds, and the baseline.
 % \emph{3D hardware environments}: deployed online 3D motion planning on a \textit{Crazyflie} quadrotor. The robot starts at \((-2.5,1.5,0.9)\) to \((0.7,-1.5,0.9)\) in a \(4\,\mathrm{m}\times4\,\mathrm{m}\times1.5\,\mathrm{m}\) taskspace. A Vicon motion-capture system provides quadrotor and obstacle poses at $50$ Hz. The policy replans at $10$ Hz, streaming the acceleration command at $100$ Hz as the feedforward component of a full-state setpoint.
 
 \noindent \textbf{Implementation details:} 
@@ -599,7 +609,7 @@ At each SFE step, the CFM policy self-generates $K=32$ proposals and resamples $
 
 Additionally, in the dynamic-pedestrian task, the verifier certifies validity with respect to the currently observed obstacle geometry, frozen over the prediction horizon. We use a constant-velocity model of the pedestrians only in the execution cost to favor valid action candidates that anticipate future collisions. Consequently, avoidance of moving pedestrians beyond the frozen-scene certificate is empirical and relies on receding-horizon replanning. 
 
-At deployment, SFE generates \(J\) parallel actions and ranks them with the same cost, with the default \(J=1\) for validity and mode discovery, and \(J>1\) in~\Cref{sec:tradeoff} to study its effect on safety and performance. 
+At deployment, SFE generates \(J\) parallel actions and ranks them with the same cost, with \(J=1\) by default for validity and mode discovery, and \(J>1\) in~\Cref{sec:tradeoff} to study its effect on safety and performance. 
 %, employing Adam with learning rate $1 \times 10^{-4}$, batch 64, and 4 inner steps. 
 
 
@@ -628,12 +638,12 @@ The adaptation tasks, (a) and (c), show narrower confidence intervals than the g
 \subsection{SFE adaptation and generalization in OOD}
 % Please write in following order: task - Figure - takeaway - comparison
 % \noindent\textbf{Configuration-specific adaptation.}
-In the 2D cluttered adaptation task, the closed loop behavior in Fig.~\ref{fig:2d_cluttered} indicates that expansion shifted the policy distribution toward verified and goal-reaching actions rather than relying on a larger deployment-time candidate set. At both tested values of $w_{\mathrm{s}}$, the baseline method does not reliably recover this behavior safely, whereas SFE learns collision-free paths around the obstacle.
+In the 2D cluttered adaptation task, the closed-loop behavior in Fig.~\ref{fig:2d_cluttered} indicates that expansion shifted the policy distribution toward verified and goal-reaching actions rather than relying on a larger deployment-time candidate set. At both tested values of $w_{\mathrm{s}}$, the baseline method does not reliably recover this behavior safely, whereas SFE learns collision-free paths around the obstacle.
 
 The 3D single sphere simulation result in Fig.~\ref{fig:beta} shows that $\beta$ controls the balance between exploration and the adherence to the prior in the sampling process~\eqref{eq:importancesampling}. SFE uses $\beta=0.1$ in this task. Smaller $\beta$ places more weight on uncertain actions and recovers more of the above, below, left, and right modes than $\beta=1.0$ and standard sampling at $\beta \to \infty$.
 % \noindent\textbf{Cross configuration generalization.}
 
-In the 3D hardware experiments, Fig.~\ref{fig:coverage}(a) shows that SFE breaks demonstration bias and discovers novel safe behaviors in an OOD obstacle geometry. MPPI-DCBF demonstrations collected among vertical cylinders are dominated by planar lateral motion. In the unseen cluttered environment, the pretrained CFM consequently remains close to the demonstration altitude. SFE progressively broadens the policy to diverse lateral trajectories and new modes. CFM-MPPI frequently collides, since its local guidance leads the robot toward the free space but the generable set of the pretrained CFM lacks enough probability mass to recover safety. In contrast, SFE shifts probability mass toward fundamentally new safe modes trained offline.
+In the 3D hardware experiments, Fig.~\ref{fig:coverage}(a) shows that SFE breaks demonstration bias and discovers novel safe behaviors in an OOD obstacle geometry. MPPI-DCBF demonstrations collected among vertical cylinders are dominated by planar lateral motion. In the unseen cluttered environment, the pretrained CFM consequently remains close to the demonstration altitude. SFE progressively broadens the policy to diverse lateral trajectories and new modes. CFM-MPPI frequently collides, since its local guidance leads the robot toward the free space, but the generable set of the pretrained CFM lacks enough probability mass to recover safety. In contrast, SFE shifts probability mass toward fundamentally new safe modes trained offline.
 
 \subsection{Computation}
 \noindent \textbf{Offline expansion.}
@@ -740,6 +750,8 @@ Safe Flow Expansion raises verifier validity over the pretrained policy in four 
 Learning an optimal $\gamma$ schedule directly from data remains an interesting open problem (\textit{e.g.,} rather than a fixed $\gamma$ during deployment). Such dynamic scheduling would allow the system to tightly trade off safety and performance, which can be critical in real-world tasks where the robot must adjust caution to context.
 
 Under the assumptions of~\Cref{sec:analysis}, Corollary~\ref{thm:safe-action-availability} provides lower bounds, with high probability, at a fixed context and $\gamma$, on the probability that a generated batch contains a valid action. Future work could explore combining our expanded policy with a lightweight run-time safety filter to provide hard guarantees. Our next step is to scale our framework to systems where expert demonstrations are prohibitively expensive, such as safety-critical manipulation, and to continue preliminary study of~\Cref{sec:futurework}.
+
+\textbf{Acknowledgments} Claude Opus 5 was used as an aid to develop helper functions in the code and LaTeX formatting, and ChatGPT 5.6 terra for phrasing refinement. 
 
 % Our next step is to scale the framework to systems with extremely large state spaces or where expert demonstrations are prohibitively expensive. In parallel, while our method robustly expands the safe action distribution, tuning the online execution cost $C$ can still shift the distribution away from the prior actions, which remains an important challenge.
 \bibliographystyle{IEEEtran}
