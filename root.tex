@@ -51,43 +51,40 @@
 %%% --------- command for Dohyun's reply on Prof. note ---------- %%%
 \newcommand{\reply}[2][reply]{\vspace{0 mm}\par \noindent \framebox{\color{blue} \begin{minipage}[c]{0.97 \hsize} {\bf #1:} #2 \end{minipage}}\vspace{3 mm}\par}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% \title{\LARGE \bf
-% SAFER: SAfe Flow Expansion for Robotics \\ with Applications in Generative Motion Planning
-% }
+
 \title{\LARGE \bf
+% SAFER: SAfe Flow Expansion for Robotics \\ with Applications in Generative Motion Planning
 % Expanding Sampling-Based Predictive Control to \\ Verifiably Safe Generative Policy in Motion Planning
-Safe Flow Expansion: Discovering Safe Robot Behaviors in Out-of-Distribution Motion Planning
+% Safe Flow Expansion: Discovering Safe Robot Behaviors in Out-of-Distribution Motion Planning
+Safe Flow Expansion: From Sampling-Based Predictive Control \\
+to Verifiably Safe Generative Policies
 }
 \author{Albert Author$^{1}$ and Bernard D. Researcher$^{2}$}
-% \author{Dohyun Lee$^{1}$, Minhyuk Jang$^{2}$, David E. J. van Wijk$^{1}$, Vince Kurtz$^{3}$, and Joel W. Burdick$^{1}$}
+% \author{Dohyun Lee$^{1}$, Minhyuk Jang$^{2}$,  Vince Kurtz$^{3}$, David E. J. van Wijk$^{1}$, and Joel W. Burdick$^{1}$}
 \begin{document}
 \maketitle
 \thispagestyle{empty}
 \pagestyle{empty}
 \vskip -0.25 true in
 \begin{abstract}
-Generative policies pretrained on safe demonstrations often perform poorly in out-of-distribution environments because they inherit the training data's limited behavior support, and inference-time guidance only reweights samples from that fixed distribution rather than expanding what the policy can generate. We introduce \emph{Safe Flow Expansion} (SFE), an offline framework that iteratively self-generates actions from a conditional flow matching (CFM) policy, verifies them against finite-horizon discrete-time control barrier function (DCBF) conditions, and updates the policy to expand its set of valid actions. 
-SFE builds on MPPI-DCBF, our proposed sampling-based planner that rejects rollouts leaving a convex nominal polytope before averaging. Under stated conditions, MPPI-DCBF certifies the executed step and provides demonstrations modulated by safety parameter $\gamma$. We derive a conditional lower bound on the probability that a batch of generated actions contains a valid action. In 2D and 3D simulation and on Crazyflie hardware, the expanded policy achieves higher validity and mode coverage than pretrained and guided baselines. We also showed that it replans with far lower latency than online planners, and $\gamma$ tunes the conservativeness of both the planner and the policy.
+Sampling-based predictive control and generative policies both sample candidate action sequences, yet standard sampling alone does not guarantee that a sequence stays safe over the prediction horizon. We present a unified sampling-based paradigm for safe motion planning in which a single safety parameter $\gamma$ specifies the finite-horizon discrete-time control barrier function (DCBF) conditions used by the planner and verifier and also conditions the generative policy. First, we present MPPI-DCBF, which rejects rollouts that violate the condition before the weighted average, so the executed step inherits the certificate. Second, Safe Flow Expansion (SFE) self-generates actions from a conditional flow matching (CFM) policy, verifies them with the same condition, and updates the policy toward its valid actions. Under the stated conditions, we derive a lower bound on the probability that a batch of generated actions contains a valid action. In 2D and 3D simulation and on Crazyflie hardware, the expanded policy achieves higher validity than the pretrained policy and higher mode coverage than the pretrained and guided baselines, and it replans with far lower latency than online planners.
+
+
+% Generative policies pretrained on safe demonstrations often perform poorly in out-of-distribution environments because they inherit the training data's limited behavior support, and inference-time guidance only reweights samples from that fixed distribution rather than expanding what the policy can generate. We introduce \emph{Safe Flow Expansion} (SFE), an offline framework that iteratively self-generates actions from a conditional flow matching (CFM) policy, verifies them against finite-horizon discrete-time control barrier function (DCBF) conditions, and updates the policy to expand its set of valid actions. 
+% SFE builds on MPPI-DCBF, our proposed sampling-based planner that rejects rollouts leaving a convex nominal polytope before averaging. Under stated conditions, MPPI-DCBF certifies the executed step and provides demonstrations modulated by safety parameter $\gamma$. We derive a conditional lower bound on the probability that a batch of generated actions contains a valid action. In 2D and 3D simulation and on Crazyflie hardware, the expanded policy achieves higher validity and mode coverage than pretrained and guided baselines. We also showed that it replans with far lower latency than online planners, and $\gamma$ tunes the conservativeness of both the planner and the policy.
 \end{abstract}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Introduction}
 % \note{I think we need to stress that MPPI-DCBF can offer an on-line safety procedure in addition to off-line training data.}
+% gaining traction as an optimal control framework. General optimal control approaches often suffer from the computational complexity that is associated with solving stochastic Hamilton--Jacobi--Bellman equations backward in time. SBPC is 
+
 %%%%%% dropped citations: kurtz2023inverse, aydinoglu2024consensus, Genesis, williams2017model, williams2017info, nguyen2025flowmp, ye2024efficient, mohamed2023gp
 
-Sampling-based predictive control (SBPC) is gaining traction as an optimal control framework. General optimal control approaches often suffer from the computational complexity that is associated with solving stochastic Hamilton--Jacobi--Bellman equations backward in time. SBPC is an alternative to gradient-based model predictive control (MPC), where a simple sampling procedure replaces a sophisticated nonlinear optimizer~\cite{posa2014direct}. 
-Algorithms in this family include model predictive path integral control (MPPI)~\cite{williams2016aggressive}, predictive sampling~\cite{howell2022predictive}, Generative Predictive Control~\cite{Kurtz_GPC}, and cross-entropy methods~\cite{rubinstein1999cross}. MPPI, for example, circumvents computational complexity by employing forward sampling of stochastic dynamics combined with Monte Carlo approximation techniques~\cite{williams2016aggressive}. 
+Sampling-based predictive control (SBPC) is an alternative to gradient-based model predictive control (MPC), where a simple sampling procedure replaces a sophisticated nonlinear optimizer~\cite{posa2014direct}. 
+Algorithms in this family include model predictive path integral control (MPPI)~\cite{williams2016aggressive}, predictive sampling~\cite{howell2022predictive}, and cross-entropy methods~\cite{rubinstein1999cross}. SBPC algorithms are particularly well-suited to recent advances in parallel computing architectures~\cite{mjx, makoviychuk2021isaac}, enabling them to scale to complex problems like in-hand dexterous manipulation~\cite{li2025drop}, legged locomotion~\cite{xue2025full}, and more~\cite{howell2022predictive}. These algorithms share deep connections with generative control techniques like diffusion \cite{chi2023diffusion} and flow-matching \cite{lipman2022flow}, and can be used to train such policies \cite{Kurtz_GPC}.
 
-SBPC algorithms are particularly well-suited to recent advances in parallel computing architectures~\cite{mjx, makoviychuk2021isaac}, enabling them to scale to complex problems like in-hand dexterous manipulation~\cite{li2025drop}, legged locomotion~\cite{xue2025full}, and more~\cite{howell2022predictive, Kurtz_GPC}.
-
-Despite these advantages, SBPCs such as MPPI, inherently struggle with safety guarantees. Safety constraints are typically incorporated indirectly through penalty terms in the path planning cost function~\cite{williams2017model, yin2023shield}. While this approach encourages safe behavior, it lacks explicit safety guarantees because the procedure relies on sampling and averaging. 
-
-Even if individual sampled trajectories satisfy safety constraints, their weighted average may not. This limitation motivates our first goal of integrating safety-critical constraints explicitly into SBPC frameworks. To this end, we introduce MPPI-DCBFs, which prevent such failure modes by restricting all nonzero-weight rollouts to a common convex polytope before averaging.
-% The optimal control is then computed as the exponentially weighted average of the sampled trajectories, enabling real-time implementation.
-% For example, the failure in Fig.~\ref{fig:hero} occurs when rollouts from different local safe regions are averaged (\textit{e.g.}, left and right mode).
-% \note{Is this a comment? "Furthermore, answer this question exactly for the executed next state under control-affine dynamics and for the entire predicted horizon under linear time-invariant dynamics."}
-% A common method to ensure safety in collision-avoidance tasks is to use a safety filter~\cite{ames2014cbf}, which minimally modifies the nominal controller output to guarantee safety constraint satisfaction. However, a simple safety filter applied \textit{only} to the control output cannot guarantee safety because control objectives and long-term safety criteria are tightly coupled and potentially conflicting. Previous work has used control Lyapunov functions (CLF) and control barrier functions (CBF), often with relaxation factors, to address this issue as an optimization problem that mediates safety and feasibility~\cite{ames2016control, zeng2021enhancing}.
-% Recent work has encoded this concept through predictive safety filters that leverage predictive CBFs in layered control architectures~\cite{compton2024learning}. However, in cluttered environments, this direct optimization often becomes non-convex and intractable.
+Despite these advantages, SBPCs such as MPPI, inherently struggle with safety guarantees. Safety constraints are typically incorporated indirectly through penalty terms in the path planning cost function~\cite{williams2017model}. While this approach encourages safe behavior, it lacks explicit safety guarantees because the procedure relies on sampling and averaging. Even if individual sampled trajectories satisfy safety constraints, their weighted average may not. This limitation motivates our first goal: integrating safety-critical constraints in SBPC.
 \begin{figure}[t]
     \centering
     \includegraphics[width=\linewidth]{images/sfe_v3.pdf}
@@ -97,19 +94,34 @@ Even if individual sampled trajectories satisfy safety constraints, their weight
     \label{fig:hero}
 \end{figure}
 
-A common method to ensure safety in collision-avoidance tasks is to impose finite-horizon control barrier function (CBF) constraints directly within MPC~\cite{zeng2021enhancing}, under nonlinear dynamics and nonconvex obstacle geometry. However, the resulting optimization can be nonconvex and computationally heavy. This computational burden motivates a shift from online constrained optimization to learning-based methods, where complex planning is performed offline to curate datasets of safe and multi-modal behavior. Generative models, such as diffusion and flow matching (FM)~\cite{lipman2022flow}, can synthesize motion trajectories and action sequences from diverse, high-dimensional demonstrations~\cite{chi2023diffusion, Kurtz_GPC}. Conditional Flow Matching (CFM) has emerged as a promising alternative to diffusion-based modeling, offering competitive generation quality with efficient sampling~\cite{chisari2024learning, ye2024efficient}. 
+Generative models, such as diffusion and flow matching (FM)~\cite{lipman2022flow}, can synthesize motion trajectories and action sequences from diverse, high-dimensional demonstrations~\cite{chi2023diffusion, Kurtz_GPC}. Conditional Flow Matching (CFM) has emerged as a promising alternative to diffusion-based modeling, offering competitive generation quality with efficient sampling~\cite{chisari2024learning, ye2024efficient}.  
+However, these models also do not natively provide formal safety guarantees during rollout. 
+Recent CFM-based works have further incorporated explicit safety constraints at inference time by trajectory regularization or constrained generation~\cite{li2026hardflow,utkarsh2026physics}, and reward-based guidance~\cite{mizuta2025unified}. In out-of-distribution (OOD) contexts, these methods rely on a fixed pretrained policy, which may assign low probability to safe and multi-modal behaviors, and aggressive guidance can further push generation away from its learned distribution~\cite{dandapanthula2026we,de2026active}.
+
+A common method to ensure safety is to employ a safety filter on the executed control~\cite{ames2014cbf, reis2020control}. However, a safety filter that applies only \emph{one step} makes the controller myopic, such as being trapped in local minima, or chatter near the constraint boundary yields myopic behavior of the controller~\cite{reis2020control, chriat2023optimality, bejarano2023multi}. \emph{Multi-step} predictive safety filters have recently gained attention, imposing finite-horizon control barrier function (CBF) constraints directly within MPC~\cite{zeng2021enhancing}, in learning-based control~\cite{bejarano2023multi, wabersich2021predictive}, and in layered control architectures~\cite{compton2024learning}. However, in cluttered environments, this direct optimization often becomes non-convex and computationally demanding.
+
+In this work, we suggest that both of these sampling-based techniques, SBPC and CFM, can benefit from multi-step safety as a certificate prevents myopic behavior. Across different motion planning problems, we restrict the predicted action sequences to \emph{valid} actions that satisfy a finite-horizon discrete-time CBF (DCBF) condition, which includes the common pointwise safety condition as its first step. At the same time, we still require the online planner to be computationally light and the generative policy to produce valid priors even in OOD scenarios. 
+
+\textbf{Contributions.} \textbf{(i)} First, to bring valid actions into SBPC as an online planner, we introduce MPPI-DCBF, which prevents the averaging failure above by restricting all nonzero-weight rollouts to a common convex polytope before averaging. It certifies the executed step under control-affine dynamics and the entire predicted horizon for LTI systems, for a $25\%$ increase in replanning latency over vanilla MPPI. \textbf{(ii)} Second, by exploiting offline learning to curate valid, multi-modal behaviors, we introduce Safe Flow Expansion (SFE), which self-generates actions with uncertainty guidance, verifies them under the same finite-horizon DCBF conditions, and continues pretraining on the valid ones. Recent work formalizes this goal as \emph{generable set expansion}~\cite{de2026active}, which expands the range of behaviors the FM model can generate. We extend this concept to a CFM policy to discover valid OOD modes that the pretrained policy misses. \textbf{(iii)} Third, we give an analysis that carries the safety parameter $\gamma$ from planner to verifier to policy. Under stated assumptions, we provide a lower bound on the probability that a generated batch contains a valid action at a fixed context. We evaluate the framework in 2D cluttered and pedestrian environments and on a 3D quadrotor, in simulation and on hardware, and we show MPPI-DCBF on a 7-DoF manipulator among non-convex objects.
+
+% To this end, we introduce the \textit{Safe Flow Expansion} framework, which expands the pretrained policy toward new safe behaviors using a safety-critical predictive planner and verifier mechanisms. Under the stated safety conditions, MPPI-DCBF can be deployed as an online receding-horizon controller while also generating certified demonstrations for offline CFM training.
+
+% \textbf{Contributions.} Our contributions are threefold:
+% (i) Safe Flow Expansion, an offline framework that expands a CFM policy's valid generable set by uncertainty-guided self-generation, finite-horizon DCBF verification, and continued pretraining, discovering valid OOD modes the pretrained policy misses.
+% (ii) MPPI-DCBF, an online planner that rejects sampled rollouts violating finite-horizon DCBF conditions before weighted averaging, preserving the safety certificate of the executed next state under control-affine dynamics and the entire predicted horizon for LTI systems.
+% (iii) An analysis carrying safety parameter $\gamma$ from planner to verifier to policy, giving, under stated assumptions, a per-context lower bound on the probability that a generated batch contains a valid action. We evaluate our idea in 2D cluttered and pedestrian environments and on a 3D quadrotor, in simulation and on hardware. 
+
+% A common method to ensure safety in collision-avoidance tasks is to impose finite-horizon control barrier function (CBF) constraints directly within MPC~\cite{zeng2021enhancing}, under nonlinear dynamics and nonconvex obstacle geometry. However, the resulting optimization can be nonconvex and computationally heavy. This computational burden motivates a shift from online constrained optimization to learning-based methods, where complex planning is performed offline to curate datasets of safe and multi-modal behavior. 
+
+% The optimal control is then computed as the exponentially weighted average of the sampled trajectories, enabling real-time implementation.
+% For example, the failure in Fig.~\ref{fig:hero} occurs when rollouts from different local safe regions are averaged (\textit{e.g.}, left and right mode).
+% \note{Is this a comment? "Furthermore, answer this question exactly for the executed next state under control-affine dynamics and for the entire predicted horizon under linear time-invariant dynamics."}
+% A common method to ensure safety in collision-avoidance tasks is to use a safety filter~\cite{ames2014cbf}, which minimally modifies the nominal controller output to guarantee safety constraint satisfaction. However, a simple safety filter applied \textit{only} to the control output cannot guarantee safety because control objectives and long-term safety criteria are tightly coupled and potentially conflicting. Previous work has used control Lyapunov functions (CLF) and control barrier functions (CBF), often with relaxation factors, to address this issue as an optimization problem that mediates safety and feasibility~\cite{ames2016control, zeng2021enhancing}.
+% Recent work has encoded this concept through predictive safety filters that leverage predictive CBFs in layered control architectures~\cite{compton2024learning}. However, in cluttered environments, this direct optimization often becomes non-convex and intractable.
+
 % CFM is particularly useful in safety-critical motion planning and control, as it can generate high-fidelity, multi-modal trajectories with fewer inference time steps. 
 % Maintaining this topological diversity is crucial to avoid committing to a single local solution that may become infeasible as the scene changes~\cite{de2024topology, shafiullah2022behavior}. 
-However, they do not natively provide formal safety guarantees during rollout. 
 
-Recent CFM-based works have further incorporated explicit safety constraints at inference time by trajectory regularization or constrained generation~\cite{li2026hardflow,utkarsh2026physics}, while MPC-based refinement has been used to improve local optimality of generated trajectories~\cite{mizuta2025unified}. However, these methods guide or refine samples from a fixed pretrained distribution. In out-of-distribution (OOD) contexts, the pretrained model may assign low probability to safe and multi-modal behaviors, and aggressive guidance can further push generation away from its learned distribution~\cite{dandapanthula2026we}.
-
-Consequently, a fundamental challenge in generative motion planning and control is to address this distribution shift by expanding the generable set of a pretrained policy toward safe and multi-modal regions of action. Recent work formalizes this goal as \emph{generable set expansion}~\cite{de2026active}, which expands the range of behaviors the FM model can generate. We extend this concept to a CFM model to discover new safe behaviors in robotics motion planning. To this end, we introduce the \textit{Safe Flow Expansion} framework, which expands the pretrained policy toward new safe behaviors using a safety-critical predictive planner and verifier mechanisms. Under the stated safety conditions, MPPI-DCBF can be deployed as an online receding-horizon controller while also generating certified demonstrations for offline CFM training.
-
-\textbf{Contributions.} Our contributions are threefold:
-(i) Safe Flow Expansion, an offline framework that expands a CFM policy's valid generable set by uncertainty-guided self-generation, finite-horizon DCBF verification, and continued pretraining, discovering valid OOD modes the pretrained policy misses.
-(ii) MPPI-DCBF, an online planner that rejects sampled rollouts violating finite-horizon DCBF conditions before weighted averaging, preserving the safety certificate of the executed next state under control-affine dynamics and the entire predicted horizon for LTI systems.
-(iii) An analysis carrying safety parameter $\gamma$ from planner to verifier to policy, giving, under stated assumptions, a per-context lower bound on the probability that a generated batch contains a valid action. We evaluate our idea in 2D cluttered and pedestrian environments and on a 3D quadrotor, in simulation and on hardware. 
 % \textbf{Contributions.} Our contributions are threefold:
 % (i) A safety-tunable online MPPI-DCBF planner that rejects sampled rollouts violating finite-horizon DCBF conditions before weighted averaging, preserving the safety certificate of the executed next state under control-affine dynamics and the entire predicted horizon for LTI systems.
 % (ii) Safe Flow Expansion, an offline uncertainty-guided procedure that self-generates and verifies CFM actions in OOD environments, therefore expands the pretrained policy toward new safe behaviors. 
@@ -183,7 +195,7 @@ from $\x_0\sim\mathcal N(0,I_d)$ to $t=1$, from which the first action is execut
 
 \subsection{Generable Set Expansion}
 % In offline training, generative policies constrain actions to the distribution of their demonstrations. 
-Recent work measures effective coverage by the \textit{$\tau$-generable set} $\Omega^\tau_\theta\!:=\!\{\x:p_1^\theta(\x)\ge\tau\}$, the region a FM model samples with non-negligible probability under a finite budget~\cite{de2026active}. Each expansion round self-generates candidates, labels them with a black-box verifier, and continues pretraining on the accepted samples. Candidates are acquired where the verifier is most uncertain, under a KL-regularized tilt of strength $\beta$ toward the current model. With calibrated verifier feedback~\cite{pasztor2024bandits}, finitely many verified queries then suffice, with high probability, for the generable set to contain samples that are reachable in boundedly many local steps~\cite{de2026active}. We adopt this view for a $\gamma$-conditioned CFM policy with a finite-horizon DCBF verifier in place of the black-box oracle, and Section~\ref{sec:analysis} provides the theoretical analysis. 
+A pretrained generative policy can be improved after training with reward or verifier feedback instead of expensive expert demonstrations. One approach fine-tunes the policy to prefer approved samples while penalizing the drift from the current model~\cite{fan2023dpok}, and this objective extends to FM policies~\cite{domingo2025adjoint}. Active Flow Expansion studies this as a means to enlarge what the model can generate through the \textit{$\tau$-generable set} $\Omega^\tau_\theta\!:=\!\{\x:p_1^\theta(\x)\ge\tau\}$, the region a FM model samples with non-negligible probability under a finite budget~\cite{de2026active}. Each expansion round self-generates candidates, labels them with a black-box verifier, and continues pretraining on the accepted samples. Candidates are acquired where the verifier is most uncertain. We adopt this view for our CFM policy with a finite-horizon DCBF verifier in place of the black-box oracle, and Section~\ref{sec:analysis} provides the theoretical analysis. 
 
 
 \subsection{Discrete-Time Control Barrier Functions}
@@ -207,17 +219,25 @@ h_j^{\mathrm{aff}}(\x;\xk) :=
 \frac{\n_j^\top(\q-\p_j)}{\n_j^\top(\q_{k\mid k}-\mathbf{p_j})}.
 \label{eq:aff_barrier}
 \end{equation}
-Since $\n_j^\top(\qk-\p_j)>0$, the safe set for each horizon $i$ can be defined as
-\begin{equation}
-\mathcal{C}^{\mathrm{aff}}_{i,j}=\{\x \in \mathbb{R}^{n_x} \mid h_j^{\mathrm{aff}}(\x;\xk)\ge (1-\gamma)^i\},\label{eq:aff_safeset}
-\end{equation}
-is a convex half-space. Iterating the condition \eqref{eq:dtcbf} from $i=0$ with the normalization $h_j^{\mathrm{aff}}(\xk;\xk)=1$ yields
-\begin{equation}
-h_j^{\mathrm{aff}}(\xki;\xk) \ge (1-\gamma)^i. \quad i = 1, \ldots, H.
-\label{eq:safetyspecification}
-\end{equation}
-It applies to any convex obstacle through its closest boundary point and outward normal, and to non-convex ones through a convex hull or decomposition.
-
+% Since $\n_j^\top(\qk-\p_j)>0$, the safe set for each horizon $i$ can be defined as
+% \begin{equation}
+% \mathcal{C}^{\mathrm{aff}}_{i,j}=\{\x \in \mathbb{R}^{n_x} \mid h_j^{\mathrm{aff}}(\x;\xk)\ge (1-\gamma)^i\},\label{eq:aff_safeset}
+% \end{equation}
+% is a convex half-space. Iterating the condition \eqref{eq:dtcbf} from $i=0$ with the normalization $h_j^{\mathrm{aff}}(\xk;\xk)=1$ yields
+% \begin{equation}
+% h_j^{\mathrm{aff}}(\xki;\xk) \ge (1-\gamma)^i. \quad i = 1, \ldots, H.
+% \label{eq:safetyspecification}
+% \end{equation}
+It applies to any convex obstacle through its closest boundary point and outward normal, and to non-convex ones through a convex hull or decomposition~\cite{deits2015computing}.
+\begin{figure}
+    \centering
+    \includegraphics[width=\linewidth]{images/demo_2d_cluttered/cluttered_rollouts_v2.png}
+    % TODO change it to .pdf before submission:)
+    \vspace{-\baselineskip}
+    \caption{SFE in an unseen giant obstacle configuration. Only SFE (right) finds a long-horizon collision-free trajectory. The pretrained policy and the guidance baseline (CFM--MPPI at both tested $w_s$) collide or fail.}
+    \label{fig:2d_cluttered}
+    \vskip -0.2 true in
+\end{figure}
 \noindent \textbf{Nominal Polytope for MPPI Safety.}
 Let $\mathcal O(\xk)$ index the obstacles observed at $\xk$. We define the
 ego-centric safety function
@@ -281,15 +301,7 @@ h^{\mathrm{poly}}(\xki;\xk)\ge(1-\gamma)^i,
 
 % A valid control barrier function on $\mathcal{U}= \mathbb{R}^{d_u}$ is usually assumed in prior works on SBPC safety. However, one must verify that there exists a \textit{feasible input-constrained controller} (\textit{i.e.,} strictly bounded inputs where $\mathcal{U}\subset\mathbb{R}^{d_u}$). Backup control barrier functions (bCBFs) \cite{gurriet2018online, van2026generalizations} have emerged as a promising approach to address this challenge.
 % Iterating this over nearby sensed obstacles yields convex polytope. The construction keeps the predicted discrete-time robot positions inside a conservative intersection of obstacle-separating half-spaces.
-\begin{figure}
-    \centering
-    \includegraphics[width=\linewidth]{images/demo_2d_cluttered/cluttered_rollouts_v2.png}
-    % TODO change it to .pdf before submission:)
-    \vspace{-\baselineskip}
-    \caption{SFE in an unseen giant obstacle configuration. Only SFE (right) finds a long-horizon collision-free trajectory. The pretrained policy and the guidance baseline (CFM--MPPI at both tested $w_s$) collide or fail.}
-    \label{fig:2d_cluttered}
-    \vskip -0.2 true in
-\end{figure}
+
 \section{Problem Definition}
 \label{sec:problemdefinition}
 We pose safe planning as a constrained optimization problem. For any ego-centric safety function, $h(\cdot;\xk)$, whose nonnegative superlevel set lies in free space, frozen over the horizon and, without loss of generality, normalized by $h(\xk;\xk)=1$: 
@@ -398,7 +410,7 @@ h^{\mathrm{aff}}_{j,\ell}\big(\pi_c(\x);\xk\big).
 \end{equation}
 Taking a minimum of these affine functions keeps every $\mathcal C_i^{\mathrm{poly}}$ convex, so Assumption~\ref{assumption_1} and Proposition~\ref{prop:2} can be extended to this general case for the linearized body points. Our setup for circular obstacles with a single body point is recovered with $N_c=1, L_j=1$ and $\pi_c=\pi_q$.
 
-Fig.~\ref{fig:robotarm}~\footnote{We omit a 3-D visualization of the level sets of~\eqref{eq:poly_multi}, which are defined in the high-dimensional configuration space through constraints on multiple body points. The 7-DoF Franka FR3 has one redundant degree of freedom, so different configurations with the same task-space pose can yield different safety function values.} shows MPPI-DCBF on a Franka FR3 arm, a seven degree of freedom (7-DOF) arm, in \emph{LIBERO}~\cite{liu2023libero}, whose obstacles are unions of convex box components. We use $N_c=559$ body points, $\Delta t=0.08$s, $H=10$. The MPPI baseline without sample rejection collides with an object. Every MPPI-DCBF trajectory reaches the goal without collision for all tested $\gamma$, and the minimum clearance was largest at $\gamma=0.1$. For the following sections, we return to the original settings for the formal analysis. 
+Fig.~\ref{fig:robotarm} shows MPPI-DCBF on a Franka FR3 arm, a seven degree of freedom (7-DOF) arm, in \emph{LIBERO}~\cite{liu2023libero}~\footnote{We omit a 3-D visualization of the level sets of~\eqref{eq:poly_multi}, which are defined in the high-dimensional configuration space through constraints on multiple body points. The 7-DoF Franka FR3 has one redundant degree of freedom, so different configurations with the same task-space pose can yield different safety function values.}. Obstacles are unions of convex box components. We use $N_c=559$ body points, $\Delta t=0.08$s, $H=10$. The MPPI baseline without sample rejection collides with an object. Every MPPI-DCBF trajectory reaches the goal without collision for all tested $\gamma$, and the minimum clearance was largest at $\gamma=0.1$. For the following sections, we return to the original settings for the formal analysis. 
 %We omit a 3-D visualization of the levelsets of~\eqref{eq:poly_multi} because, for a Franka FR3 it has an extra degrees of freedom so for the $\x$ there are many possible $\q$ which affects the affine function for each sampled points, thus the safe set is defined by constraints on multiple body points in the robot’s high-dimensional configuration space and cannot be represented in 3-D position space.
 
 \subsection{Multi-step Safety Verification}
@@ -637,7 +649,7 @@ At each SFE step, the CFM policy self-generates $K=32$ proposals and resamples $
 
 Additionally, in the dynamic-pedestrian task, the verifier certifies validity with respect to the currently observed obstacle geometry, frozen over the prediction horizon. We use a constant-velocity model of the pedestrians only in the execution cost to favor valid action candidates that anticipate future collisions. Consequently, avoidance of moving pedestrians beyond the frozen-scene certificate is empirical and relies on receding-horizon replanning. 
 
-At deployment, SFE generates \(J\) parallel actions and ranks them with the same cost, with \(J=1\) by default for validity and mode discovery, and \(J>1\) in~\Cref{sec:tradeoff} to study its effect on safety and performance. 
+At deployment, SFE generates \(J\) parallel actions and ranks them with the same cost without online verification. Therefore, it measures validity rather than a hard execution-time guarantee, and we used \(J=1\) by default for validity and mode discovery, and \(J>1\) in~\Cref{sec:tradeoff} to study its effect on safety and performance. 
 %, employing Adam with learning rate $1 \times 10^{-4}$, batch 64, and 4 inner steps. 
 
 
@@ -703,7 +715,7 @@ With self-generation and verification offline, SFE needs only \(0.93\,\mathrm{ms
 Cost-based mode selection over \(J\) actions adds a fixed (\(\sim 6\mathrm{ms}\)) overhead from the sequential evaluation induced by velocity clipping. However, with parallelized computation, SFE still replans faster than both online baselines even at $J=512$. 
 %We therefore used this parallelism to study how \(J\) affects task performance and safety in the following section.
 
-\subsection{Safety-tunable planning and generation}
+\subsection{Safety-tunable planning and generation via $\gamma$}
 \label{sec:tradeoff}
 
 \begin{figure}[t]
@@ -718,16 +730,17 @@ Cost-based mode selection over \(J\) actions adds a fixed (\(\sim 6\mathrm{ms}\)
     \vskip -0.3 true in 
 \end{figure}
 
-\Cref{sec:problemdefinition} adopts $\gamma$ as one dimensionless knob shared by the planner, the verifier, and the policy. Fig.~\ref{fig:tradeoff} quantitatively shows that expansion widens the range of behaviors that $\gamma$ induces, relative to the pretrained policy. In both OOD tasks, $J=1$ show a clear effect of $\gamma$. Lower $\gamma$ gives more conservative behavior with greater mean clearance and longer time-to-goal, whereas higher $\gamma$ produces more goal-directed behavior. Thus, the safety parameter lets the robot solve the same task at different safety levels. By contrast, CFM-MPPI varies little across $\gamma$. It guides and refines samples from the same safety-conditioned model, but its guidance reward uses fixed weights $w_\text{s}, w_\text{g}$ and applies neither rejection nor verification.
+\Cref{sec:problemdefinition} adopts $\gamma$ as one dimensionless knob shared by the planner, the verifier, and the policy. Fig.~\ref{fig:tradeoff} quantitatively shows that expansion widens the range of behaviors that $\gamma$ induces, relative to the pretrained policy. In both OOD tasks, $J=1$ show a clear effect of $\gamma$. Lower $\gamma$ gives more conservative behavior with greater mean clearance and longer time-to-goal, whereas higher $\gamma$ produces more goal-directed behavior. Thus, the safety parameter lets the robot solve the same task at different safety levels. 
+%By contrast, CFM-MPPI varies little across $\gamma$. It guides and refines samples from the same safety-conditioned model, but its guidance reward uses fixed weights $w_\text{s}, w_\text{g}$ and applies neither rejection nor verification.
 
-The safety and performance difference between MPPI-DCBF and the pretrained policy in Fig.~\ref{fig:tradeoff} is the imitation gap under distribution shift. SFE recovers a broad portion of this gap. CFM-MPPI instead largely maintains the pretrained clearance and improves primarily in time-to-goal, most visibly in the dynamic pedestrian task. Empirically, increasing $J$ moves SFE toward both higher clearance and lower time-to-goal.
+The safety and performance difference between MPPI-DCBF and the pretrained policy in Fig.~\ref{fig:tradeoff} is the imitation gap under distribution shift. SFE recovers a broad portion of this gap. CFM-MPPI instead varies little across $\gamma$, largely maintains the pretrained clearance, and improves primarily in time-to-goal, most visibly in the dynamic pedestrian task. Empirically, increasing $J$ moves SFE toward both higher clearance and lower time-to-goal.
 
 This is also consistent with Corollary~\ref{thm:safe-action-availability}, since a larger batch is more likely to contain a valid action in the same context. Although, the bound itself does not guarantee improvement of either metric. The following theoretical analysis formally grounds these empirical findings. 
 
 \subsection{Safe Flow Expansion Analysis}
 \label{sec:analysis}
 
-This section connects the MPPI-DCBF demonstrations to the initial set for SFE and a conditional lower bound on valid-action availability (Details on the fixed-context analysis model and generable set coverage are deferred to~\Cref{app:sfe-analysis}). All results apply separately to each fixed $(\o,\gamma)$, and extending them to closed-loop operation over sequences of changing OOD contexts remains future work.
+This section connects the MPPI-DCBF demonstrations to the initial set for SFE and a conditional lower bound on valid-action availability (Details on the fixed-context analysis model and generable set coverage are deferred to Assumption.~\ref{app:sfe-analysis}). All results apply separately to each fixed $(\o,\gamma)$, and extending them to closed-loop operation over sequences of changing OOD contexts remains future work~\footnote{The following result analyzes an idealized expansion process satisfying~\Cref{assumptions:afe}, while it does not directly characterize the CFM update in~\Cref{alg:sfe}.}.
 
 For a validity threshold $p_{\min}\in(0,1)$ and $\epsilon\in(0,1-p_{\min})$, we denote a measurable $S_0\subseteq\mathcal U^H$ an \textit{initial safe set} if $\operatorname{Vol}(S_0)$ is well defined and positive, $S_0\subseteq\Omega^{\tau}_{\theta_0}(\o,\gamma)\cap\Omega^\star(\o,\gamma)$, and $\inf_{\hat{\mathbf u}\in S_0}\varsigma(g(\phi_s(\hat{\mathbf u};\o,\gamma))) \ge p_{\min}+\epsilon$. Let $R_\epsilon$ denote the induced action-space one-step reachability operator of~\cite[Eq.~(19)]{de2026active} \footnote{In our notation, this operator maps a set $S\subseteq\mathcal U^H$ of actions to \(R_\epsilon(S):=\{\hat{\mathbf u}\in\mathcal U^H:\ \exists\,\hat{\mathbf u}'\in S\ \text{s.t.}\varsigma(g(\phi_s(\hat{\mathbf u}';\o,\gamma)))-L_\varsigma L_g\,d(\hat{\mathbf u},\hat{\mathbf u}')-\epsilon\ \ge\ p_{\min}\},\) where $d(\hat{\mathbf u},\hat{\mathbf u}'):=\|\phi_s(\hat{\mathbf u};\o,\gamma)-\phi_s(\hat{\mathbf u}';\o,\gamma)\|_2$ is the feature distance, and $L_\varsigma$ and $L_g$ are the Lipschitz constants of $\varsigma$ and $g$ in the analysis model.} with $\mathcal X=\mathcal U^H$ and $\phi=\phi_s(\cdot;\o,\gamma)$. We use  $R_\epsilon^r$ for $r$ repeated applications of this operator.
 
