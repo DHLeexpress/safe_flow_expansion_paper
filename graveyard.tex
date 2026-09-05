@@ -1,3 +1,29 @@
+% A valid control barrier function on $\mathcal{U}= \mathbb{R}^{d_u}$ is usually assumed in prior works on SBPC safety. However, one must verify that there exists a \textit{feasible input-constrained controller} (\textit{i.e.,} strictly bounded inputs where $\mathcal{U}\subset\mathbb{R}^{d_u}$). Backup control barrier functions (bCBFs) \cite{gurriet2018online, van2026generalizations} have emerged as a promising approach to address this challenge.
+% Iterating this over nearby sensed obstacles yields convex polytope. The construction keeps the predicted discrete-time robot positions inside a conservative intersection of obstacle-separating half-spaces.
+
+
+% We pose safe planning as a constrained optimization problem. For any ego-centric safety function, $h(\cdot;\xk)$, whose nonnegative superlevel set lies in free space, frozen over the horizon and, without loss of generality, normalized by $h(\xk;\xk)=1$: 
+
+% \begin{subequations}
+% \label{eq:problemdef}
+% \begin{alignat}{2}
+% & &&\min_{\mathbf{u}_{k:k+H-1}}\quad
+%  \mathbb{E}\!\left[
+% J(\mathbf{x}_{k:k+H},
+%   \mathbf{u}_{k:k+H-1})
+% \right]\\
+% & \text{s.t.}\;
+% && \mathbf{x}_{k+i+1}\!=\!f(\mathbf{x}_{k+i},\mathbf{u}_{k+i}),\; i\!=\!0,\ldots,H-1,\\
+% &&&
+% % \mathbf{x}_{k}\!=\!\mathbf{x}_k,
+% \mathbf{x}_{k:k+H}\!\in\!\mathcal{X}^{H+1},
+% \mathbf{u}_{k:k+H-1}\!\in\!\mathcal{U}^{H},\\
+% &&& h(\mathbf{x}_{k+i};\mathbf{x}_k) \!\ge\! (1-\gamma)^i,\; i\!=\!1,\ldots,H.
+% \label{eq:poly}
+% \end{alignat}
+% \end{subequations}
+
+
 % Sampling-based predictive control (SBPC) (e.g., model predictive path integral control (MPPI)) efficiently predicts receding-horizon actions.  However, the safety of individual MPPI rollouts do not guarantee a safe weighted average.  Moreover, policies pretrained on safe demonstrations may poorly represent safe behaviors in out-of-distribution (OOD) deployments. This paper introduces new methods to ensure safety in SBPC and to guarantee a conditional lower bound on the probability of generating a safe action.
 % We address sampling-based safety through a discrete-time control barrier function (DCBF) condition, enforced conservatively to produce certified safe data and to verify new behaviors.
 % We first introduce MPPI-DCBF, which rejects unsafe samples within a convex safe region before averaging and preserves the executed next-state safety certificate under control-affine dynamics and the full predicted-horizon certificate for linear time-invariant systems. 
