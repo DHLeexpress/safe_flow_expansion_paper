@@ -7,7 +7,7 @@ k_{\phi}^{\o,\gamma}(\hat{\mathbf u},\hat{\mathbf u}')
 :=k(\phi_s(\hat{\mathbf u};\o,\gamma),\phi_s(\hat{\mathbf u}';\o,\gamma)).
 \end{equation}
 
-The verifier here, $v_\gamma$, is deterministic. The random variable $Y$ below is used only by the probabilistic model in the analysis and is not the verifier output. Deterministic validity is imposed separately through the common set with $\Omega^\star(\o,\gamma)$.
+The verifier $v_\gamma$ is deterministic. Thus, the random variable $Y$ below is used only by the probabilistic model in the analysis which is not the verifier output. Deterministic validity is imposed separately through the common set with $\Omega^\star(\o,\gamma)$.
 \begin{assumption}[Analysis model, {\cite[App.~F]{de2026active}}]
 \label{assumptions:afe}
 Fix $(\o,\gamma)$ and a validity threshold $p_{\min}\in(0,1)$.
@@ -18,12 +18,13 @@ $k_\phi^{\o,\gamma}\le1$.
 in~\cite{de2026active}. Within the current conditional generable set, the uncertainty-tilted sampler in~\eqref{eq:importancesampling} selects an action that approximately maximizes $\sigma_n$.
 \end{assumption}
 
-\begin{lemma}[Restatement {\cite[Thm.~F.5]{de2026active}} in action space]
+\begin{lemma}[Restatement {\cite[Thm.~F.5]{de2026active}} in $\mathcal U^H$]
 \label{lem:coverage}
 Fix $\delta\in(0,1)$, $\epsilon\in(0,1-p_{\min})$, a positive integer $r$, and a seed $S_0$.
-Assume every condition of~\cite[Thm.~F.5]{de2026active} after replacing its state set with $\mathcal U^H$ and its feature map by $\phi_s(\cdot;\o,\gamma)$~\footnote{This includes the conditions on the energy-based model, density threshold, calibration, oracle, sample-complexity conditions, and auxiliary radius.}.
-There is a budget $T^\star=rT$ for queries and then updates such that the coverage event with the fixed context
-\[
+Assume every condition of~\cite[Thm.~F.5]{de2026active} after replacing its state set with $\mathcal U^H$ and feature map by $\phi_s(\cdot;\o,\gamma)$~\footnote{This includes the conditions on the energy-based model, density threshold, calibration, oracle, sample-complexity conditions, and auxiliary radius.}.
+For fixed $(\o,\gamma)$, there exists $T^\star=rT$ such that the coverage event
+\begin{equation}
+\label{eq:coverage}
 \mathcal E_{\mathrm{cov}}
 :=
 \left\{
@@ -31,9 +32,9 @@ R_\epsilon^r(S_0)
 \subseteq
 \Omega_{\theta_{T^\star}}^\tau(\o,\gamma)
 \right\}
-\]
+\end{equation}
 satisfies
 $\Pr(\mathcal E_{\mathrm{cov}})\ge1-\delta$.
 \end{lemma}
-
-Here $T^\star$ is the number of sequential query and model update steps performed at $(\o,\gamma)$. In practice, Alg.~\ref{alg:sfe} freezes $\theta_n$ and $\sigma_n$ within a batch and combines data from different contexts. Therefore, we cannot use its total number of verifier evaluations directly as $T^\star$. Combining data from different contexts does not change the definitions of $\mathcal A_{\gamma,r}(\o)$ or $m_{\gamma,r}(\o)$. However, the probability $1-\delta$ applies separately to each context. During SFE acquisition, $v_\gamma$ evaluates every candidate action before cost-based execution. 
+Here $T^\star$ counts sequential queries and model updates in the analysis at fixed $(\o,\gamma)$. Alg.~\ref{alg:sfe} uses batched acquisition and updates across contexts, so its total verifier count is distinct from this analysis budget.
+% Here $T^\star$ is the number of sequential query and model update steps performed at $(\o,\gamma)$. In practice, Alg.~\ref{alg:sfe} freezes $\theta_n$ and $\sigma_n$ within a batch and combines data from different contexts. Therefore, we cannot use its total number of verifier evaluations directly as $T^\star$. Combining data from different contexts does not change the definitions of $\mathcal A_{\gamma,r}(\o)$ or $m_{\gamma,r}(\o)$. However, the probability $1-\delta$ applies separately to each context. During SFE acquisition, $v_\gamma$ evaluates every candidate action before cost-based execution. 
