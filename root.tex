@@ -347,7 +347,7 @@ The same $\gamma$ specifies the verifier constraints and conditions the generati
     \includegraphics[width=\linewidth]{images/demo_2d_cluttered/cluttered_rollouts_v2.png}
     % TODO change it to .pdf before submission:)
     \vspace{-7.0mm}
-    \caption{SFE in an unseen giant obstacle configuration. Only SFE (right) finds a long-horizon collision-free trajectory. The pretrained policy and the guidance baseline (CFM--MPPI at both tested $w_s$) collide or fail.}
+    \caption{SFE in an unseen giant obstacle configuration. The pretrained CFM and CFM-MPPI at two tested safety reward weights ($w_s$) are compared with SFE. After expansion, SFE learns collision-free paths around the obstacle.}
     \label{fig:2d_cluttered}
     \vskip -0.2 true in
 \end{figure}
@@ -764,20 +764,22 @@ Cost-based mode selection over \(J\) actions adds a fixed (\(\sim 6\mathrm{ms}\)
     % TODO change it to .pdf before submission:)
     \vspace{-7.0mm}
     \caption{\textbf{Safety--performance trade-off under a shared safety parameter.} Two OOD generalization tasks compare the pretrained CFM, MPPI-DCBF, CFM-MPPI, and SFE at different values of $\gamma$ and $J$ (SFE).
-    Results are acquired over 3 seeds, 95$\%$ intervals are shown, and lines connect increasing $\gamma$ within each method.
     Across both tasks, $\gamma$ modulates behavior from conservative to aggressive for MPPI-DCBF and SFE.
+    Results are acquired over 3 seeds, 95$\%$ intervals are shown, and lines connect increasing $\gamma$ within each method.
     %, where CFM-MPPI barely moves, and larger $J$ empirically shifts SFE toward higher clearance and lower time to goal.
     }
     \label{fig:tradeoff}
     \vskip -0.3 true in 
 \end{figure}
-Our unified paradigm uses a single safety parameter $\gamma$ to specify the DCBF conditions for the planner and verifier and to condition the generative policy. Fig.~\ref{fig:tradeoff} quantitatively shows that this shared parameter controls the safety--performance trade-off in both MPPI-DCBF and SFE.
+Our unified paradigm uses a single safety parameter $\gamma$ in online planning and policy learning.
+MPPI-DCBF accepts only rollouts satisfying the bound $(1-\gamma)^i$ in~\eqref{eq:poly} before weighted averaging, with smaller $\gamma$ imposing a stricter safety margin. The verifier applies the same bound in~\eqref{eq:socp}, and Proposition~\ref{prop:gamma-effect} establishes that decreasing $\gamma$ constrains the valid action set. SFE learns this different level of safety and also expands its generable set beyond the demonstrations.
+% specify the DCBF conditions for the planner and verifier and to condition the generative policy. 
 
-This strong empirical result can be critical in real-world tasks where the robot must adjust caution to context, as $\gamma$ can serve as a safety knob during sampling for the online planner and generative policy. While the imitation gap degrades safety after pretraining, SFE successfully recovers the average clearance. 
+Fig.~\ref{fig:tradeoff} quantitatively shows that $\gamma$ controls the safety--performance trade-off in both MPPI-DCBF and SFE. Across both OOD generalization tasks, lower $\gamma$ gives more conservative behavior with greater mean clearance, whereas higher $\gamma$ produces more aggressive behavior with shorter time-to-goal. This strong empirical result can be critical in real-world tasks where the robot must adjust caution to context, as $\gamma$ can serve as a safety knob during sampling for the online planner and generative policy. 
 
-Across the highly dynamic pedestrian and cluttered 3D OOD environments, SFE achieves greater mean clearance than mode-selective CFM-MPPI~\cite{mizuta2025unified}. These results support that limited coverage of valid behaviors in the pretrained policy, a central motivation for generable-set expansion~\cite{de2026active}, remains a bottleneck for OOD navigation even with online guidance and refinement.
-
-Moreover, with cost-based mode selection ($J>1$), SFE achieves better performance and safety. This benefits from a larger candidate pool yields higher clearance and shorter time-to-goal, at the cost of some computational overhead. This is also consistent with Corollary~\ref{thm:safe-action-availability}, since a larger batch is more likely to contain a valid \emph{and performative} action in the same context. Although, the bound itself does not guarantee improvement of either metric. The following theoretical analysis formally grounds these empirical findings. 
+SFE achieves greater mean clearance than the pretrained CFM under distribution shift. With cost-based mode selection ($J=4,16$), SFE achieves even better performance and safety than $J=1$. This benefits from a larger candidate action pool at deployment at the cost of some computational overhead (Fig.~\ref{fig:coverage}(b)). Intuitively, a larger batch provides more action candidates for selecting a valid action with low cost.
+% as noted in Corollary~\ref{thm:safe-action-availability} although the bound itself does not guarantee improvement of either metric. The following theoretical analysis formally grounds these empirical findings. 
+% Across the highly dynamic pedestrian and cluttered 3D OOD environments, SFE achieves greater mean clearance than mode-selective CFM-MPPI~\cite{mizuta2025unified}. These results support that limited coverage of valid behaviors in the pretrained policy, a central motivation for generable-set expansion~\cite{de2026active}, remains a bottleneck for OOD navigation even with online guidance and refinement.
 %Thus, the safety parameter lets the robot solve the same task at different safety levels. 
 %By contrast, CFM-MPPI varies little across $\gamma$. It guides and refines samples from the same safety-conditioned model, but its guidance reward uses fixed weights $w_\text{s}, w_\text{g}$ and applies neither rejection nor verification.
 % The safety and performance difference between MPPI-DCBF and the pretrained policy in Fig.~\ref{fig:tradeoff} is the imitation gap under distribution shift. SFE recovers a broad portion of this gap. 
