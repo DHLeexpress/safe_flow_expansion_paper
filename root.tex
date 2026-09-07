@@ -735,7 +735,7 @@ Across $3$ seeds, $\beta\!=\!0.1$ recovered all four modes, compared with standa
 More importantly, we demonstrated that SFE not only learns the collision-free path but also discovers completely new safe behaviors in OOD (Fig.~\ref{fig:coverage}). In the 3D hardware experiments, MPPI-DCBF demonstrations collected among vertical cylinders are dominated by planar lateral motion. In the unseen cluttered environment with spheres, the pretrained CFM consequently stays close to the demonstration altitude and collapses into two dominant modes. 
 SFE covers all eight lateral modes by \(\theta_{10}\). Across 3 seeds with 100 simulated evaluation episodes each in the 3D cluttered task, collision rates were 8.3\% for the pretrained CFM, 20.7\% for CFM-MPPI, and 2.3\% for SFE. 
 The finite-horizon DCBF condition includes a pointwise safety condition at the first predicted step. The lower collision rates complement the increased validity by showing improved closed-loop safety under receding-horizon execution. 
-Collision rates for other tasks are omitted due to space constraints.
+% TODOCollision rates for other tasks are omitted due to space constraints.
 CFM-MPPI frequently collides, although its local guidance pushes the robot toward free space, but the pretrained CFM's generable set lacks enough probability mass to recover safety. In contrast, SFE shifts probability mass toward fundamentally new safe modes trained offline.
 
 \subsection{Offline Expansion Cost and Online Planning Latency}
