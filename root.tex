@@ -9,6 +9,9 @@
 \usepackage{amsmath}
 \usepackage{cleveref}
 \usepackage{amsthm}
+\makeatletter
+\def\thm@space@setup{\thm@preskip=2pt\thm@postskip=2pt}
+\makeatother
 \usepackage{enumitem}
 \usepackage{stfloats}
 \usepackage[ruled,vlined]{algorithm2e}
@@ -97,10 +100,13 @@ This limitation motivates our first goal: integrating safety-critical constraint
 
 Generative models, such as diffusion and flow matching (FM)~\cite{lipman2022flow}, can synthesize motion trajectories and action sequences from diverse, high-dimensional demonstrations~\cite{chi2023diffusion, Kurtz_GPC}. 
 %Conditional Flow Matching (CFM) has emerged as a promising alternative to diffusion-based modeling, offering competitive generation quality with efficient sampling~\cite{chisari2024learning, ye2024efficient}.  
-However, these models also do not natively provide formal safety guarantees during rollout. 
-Recent CFM-based works incorporate explicit safety constraints at inference time by trajectory regularization~\cite{utkarsh2026physics}, constrained generation~\cite{li2026hardflow}, and reward-based guidance~\cite{mizuta2025unified}. In out-of-distribution (OOD) contexts, these methods rely on a fixed pretrained policy, 
-% which may assign low probability to safe and multi-modal behaviors, and 
-aggressive guidance can push generation away from its learned distribution~\cite{dandapanthula2026we}.
+However, these models also do not natively provide formal safety guarantees during rollout.
+Recent CFM-based works incorporate explicit safety constraints at inference time~\cite{utkarsh2026physics,li2026hardflow}, or use reward-based guidance with subsequent MPC refinement~\cite{mizuta2025unified}. However, generative policies often fail in out-of-distribution (OOD) contexts when demonstrations poorly cover required behaviors~\cite {luo2024potential}, 
+and inference-time guidance alone may not sufficiently increase the probability of safe and multi-modal behaviors~\cite{dandapanthula2026we}.
+% In flow-based planners, repeated interventions on intermediate samples can also distort the learned flow and produce incomplete paths~\cite{yang2026safeflowmatcher}.
+% Recent CFM-based works incorporate explicit safety constraints at inference time by trajectory regularization~\cite{utkarsh2026physics}, constrained generation~\cite{li2026hardflow}, and reward-based guidance~\cite{mizuta2025unified}. In out-of-distribution (OOD) contexts, these methods rely on a fixed pretrained policy, 
+% % which may assign low probability to safe and multi-modal behaviors, and 
+% aggressive guidance can push generation away from its learned distribution~\cite{dandapanthula2026we}.
 
 Safety can be ensured via a {\em safety filter} on the executed control~\cite{ames2014cbf, reis2020control}. However, a safety filter that verifies only \emph{one controller cycle} makes the controller myopic, and can be trapped in local minima or chatter near the constraint boundary~\cite{reis2020control, chriat2023optimality, bejarano2023multi}. \emph{Multi-step} predictive safety filters impose finite-horizon control barrier function (CBF) constraints directly within an MPC~\cite{zeng2021enhancing}, in learning-based control~\cite{bejarano2023multi, wabersich2021predictive}, and in layered control architectures~\cite{compton2024learning}. However, in cluttered environments, this direct optimization often becomes non-convex and computationally demanding.\par
 \begin{figure}[t]
@@ -187,16 +193,30 @@ MPPI optimizes a mean control sequence $\{ \uki \}_{i=0}^{H-1}$ in a convex admi
 \end{align}
 \end{subequations}
 with state cost $q: \mathbb{R}^{n_x} \rightarrow \mathbb{R}$, terminal cost $\phi : \mathbb{R}^{n_x} \rightarrow \mathbb{R}$,  control disturbance variance $\Sigma$, control weight $R \in \mathbb{R}^{n_u \times n_u}$. Soft-min weights with temperature $\lambda>0$, stabilized by subtracting $S_\text{min}$, define the update for $i\in\{0,\cdots,H-1\}$,
-\begin{equation}
-\omega_m\!:=\!\exp(-(S^{(m)}\!\!-\!S_{\min})/{\lambda}),\; S_{\min}\!:=\!\!\!\min_{\ell=1,\ldots,M}S^{(\ell)}.
-\label{eq:mppi-weights}
-\end{equation}
-\begin{equation}
-\Delta \mathbf{u}_{k+i}\!=\!
-\frac{\sum_{m=1}^{M}\omega_m\,\varepsilon^{(m)}_{k+i}}{\sum_{m=1}^{M}\omega_m},
-\mathbf{u}^\star_{k+i}\!\leftarrow\!\bar{\mathbf{u}}_{k+i}\!+\!\Delta \mathbf{u}_{k+i}. \label{eq:mppi-update}
-\end{equation}
-Only control $\uk^\star$ is applied before replanning. This parallelizable sampling process is well-suited to solving non-convex optimal control problems on GPU hardware. However, a key challenge arises in safety-critical applications. Prior work either biases the sampling distribution toward safety without certifying it ~\cite{yin2022,yin2023shield}, or executes the first input of the lowest-cost rollout under a CBF filter~\cite{rabiee2024guaranteed}.
+\begingroup
+\setlength{\jot}{0pt}
+\begin{align}
+&\omega_m\!:=\!\exp(-(S^{(m)}\!\!-\!S_{\min})/\lambda),
+\;S_{\min}\!:=\!\min_{\ell=1,\ldots,M}S^{(\ell)}.
+\label{eq:mppi-weights}\\
+&\Delta\mathbf u_{k+i}\!=\!
+\frac{\sum_{m=1}^{M}\omega_m\,\varepsilon^{(m)}_{k+i}}
+     {\sum_{m=1}^{M}\omega_m},\;
+\mathbf u^\star_{k+i}\!\leftarrow\!
+\bar{\mathbf u}_{k+i}\!+\!\Delta\mathbf u_{k+i}.
+\label{eq:mppi-update}
+\end{align}
+\endgroup
+% \begin{equation}
+% \omega_m\!:=\!\exp(-(S^{(m)}\!\!-\!S_{\min})/{\lambda}),\; S_{\min}\!:=\!\!\!\min_{\ell=1,\ldots,M}S^{(\ell)}.
+% \label{eq:mppi-weights}
+% \end{equation}
+% \begin{equation}
+% \Delta \mathbf{u}_{k+i}\!=\!
+% \frac{\sum_{m=1}^{M}\omega_m\,\varepsilon^{(m)}_{k+i}}{\sum_{m=1}^{M}\omega_m},
+% \mathbf{u}^\star_{k+i}\!\leftarrow\!\bar{\mathbf{u}}_{k+i}\!+\!\Delta \mathbf{u}_{k+i}. \label{eq:mppi-update}
+% \end{equation}
+Only control $\uk^\star$ is applied before replanning. This parallelizable sampling process is well-suited to solving non-convex optimal control problems on GPU hardware. However, a key challenge arises in safety-critical applications. Prior work incorporate DCBF-based penalties toward safety without certifying it~\cite{yin2023shield}, or executes among the lowest-cost rollouts under a CBF filter~\cite{rabiee2024guaranteed}.
 
 % \note{This is a very sparse introduction to flow=matching.}
 \subsection{Conditional Flow Matching for policy learning}
@@ -205,13 +225,13 @@ CFM is increasingly used for robotic trajectory generation and policy generation
 Policy generation learns a mapping from noise to entire action sequences via end-to-end supervised learning.
 % but it can struggle to generalize to OOD environments, where it may require complete retraining \cite{ye2024efficient}. 
 We train CFM policies on MPPI-DCBF expert action sequences. Let $\hat{\mathbf u}^{\star}$ denote the optimized control sequence returned by~\eqref{eq:mppi-update}, and set
-$\z:=\hat{\mathbf u}^{\star}$. The CFM model learns to sample from the distribution of $\z$ conditioned on the observation $\o$ and $\gamma$ (\textit{i.e.,} the safety parameter). For $\epsilon\!\sim\!\mathcal N(0,I_{d})$, where $d=Hn_u$, and $\z\!\sim\! p_{\mathrm{data}}$, we use an optimal transport conditional probability path $\x_t\!=\!(1-t)\epsilon+t\z$, whose velocity is $\dot{\x}_t=\z-\epsilon$~\cite{lipman2022flow}. 
+$\z:=\hat{\mathbf u}^{\star}$. The CFM model learns to sample from the distribution of $\z$ conditioned on the observation $\o$ and $\gamma$ (\textit{i.e.,} the safety parameter). For $\epsilon\!\sim\!\mathcal N(0,I_{n_z})$, where $n_z=Hn_u$, and $\z\!\sim\! p_{\mathrm{data}}$, we use an optimal transport conditional probability path $\x_t\!=\!(1-t)\epsilon+t\z$, whose velocity is $\dot{\x}_t=\z-\epsilon$~\cite{lipman2022flow}. 
 The CFM objective is
 \begin{equation}
 \mathcal{L}(\theta)=
 \mathbb{E}_{\substack{
 t\sim\mathrm{Unif}[0,1],\\
-\epsilon\sim\mathcal{N}(0,I_{d}),\\
+\epsilon\sim\mathcal{N}(0,I_{n_z}),\\
 (\z,\o,\gamma)\sim p_{\mathrm{data}}
 }}
 \left[
@@ -223,7 +243,7 @@ t\sim\mathrm{Unif}[0,1],\\
 \end{equation}
 At inference, an action sequence (hereafter, an \emph{action}) is generated by integrating 
 $\dot{\x}_t=\mathbf v_t^\theta(\x_t\!\mid\!\o,\gamma)$
-from $\x_0\sim\mathcal N(0,I_d)$ to $t=1$, from which the first control is executed in receding horizon fashion.
+from $\x_0\sim\mathcal N(0,I_{n_z})$ to $t=1$, from which the first control is executed in receding horizon fashion.
 
 \subsection{Generable Set Expansion}
 Pretrained generative policies can improve through reward or verifier feedback without additional expert demonstrations.
@@ -264,7 +284,7 @@ $\u_k\in\mathcal U$ satisfying
     \label{eq:dtcbf}
 \end{equation}
 If $\x_0\in\mathcal C$ and \eqref{eq:dtcbf} holds
-at every step, then \(h(\x_k)\!\ge\!(1-\gamma)^{k}\,h(\x_0)\), so the fixed set $\mathcal{C}$ is forward invariant~\cite{ames2014cbf,agrawal2017discrete}. Let $\q=\piq(\x)$, with $\piq:\mathbb R^{n_x}\to\mathbb R^d$ linear projecion. For each observed convex obstacle $j\in\mathcal O(\xk)$, let $\p_j$ be its closest boundary point to $\qk$ and $\n_j$ its outward unit normal. Assuming $\n_j^\top(\qk-\p_j)>0$, define
+at every step, then \(h(\x_k)\!\ge\!(1-\gamma)^{k}\,h(\x_0)\), so the fixed set $\mathcal{C}$ is forward invariant~\cite{ames2014cbf,agrawal2017discrete}. Let $\q=\piq(\x)$, with $\piq:\mathbb R^{n_x}\to\mathbb R^d$ linear projection. For each observed convex obstacle $j\in\mathcal O(\xk)$, let $\p_j$ be its closest boundary point to $\qk$ and $\n_j$ its outward unit normal. Assuming $\n_j^\top(\qk-\p_j)>0$, define
 \begin{equation}
 h_j^{\mathrm{aff}}(\x;\xk) :=\n_j^\top(\q-\p_j)/\n_j^\top(\q_{k}-\mathbf{p_j}).
 \label{eq:aff_barrier}
@@ -285,7 +305,7 @@ Let $\mathcal O(\xk)$ index the obstacles observed at $\xk$. We define the ego-c
 \begin{equation}\label{eq:poly_single}
 h^{\mathrm{poly}}(\x;\xk):=\min_{j\in\mathcal O(\xk)} h_j^{\mathrm{aff}}(\x;\xk).
 \end{equation}
-The obstacle-free half-spaces bounded by the supporting hyperplanes define the \textbf{nominal polytope for MPPI safety:}
+The obstacle-free half-spaces bounded by the supporting hyperplanes define the nominal polytope for MPPI safety:
 \begin{equation}
 \mathcal P^{\mathrm{nom}}(\xk)
 :=\bigcap_{j\in\mathcal O(\xk)}
@@ -414,6 +434,7 @@ for every $i$.
 For LTI dynamics, induction gives $\x^\star_{k+i}=\sum_m\hat\omega_m\x^{(m)}_{k+i}$ throughout the horizon. Both claims follow from convexity of $\mathcal C_i^{\mathrm{poly}}$.\hfill$\blacksquare$
 
 These guarantees assume the existence of accepted controls that satisfy the DCBF constraint~\eqref{eq:poly} with $h=h^\text{poly}$ but do not establish recursive feasibility. A similar distinction for MPC-CBF likewise does not ensure recursive feasibility, as discussed in~\cite[Remark~1]{zeng2021enhancing}.
+%%%%% Past assumptions + propositions
 % \begin{assumption}[Pointwise feasibility]
 % \label{assumption_1}
 % For the discrete-time control affine system \eqref{eq:affinesystem}, for every replanning state $\xk$, and safety parameter $\gamma \in (0,1]$, 
@@ -512,7 +533,7 @@ Now we describe the important concept of the objective of proposed algorithm, Sa
 
 \begin{definition}
 \label{def:verifier}
-Let \(v_\gamma(\hat{\mathbf u};\o) \in \{0, 1\}\) be a indicator function that equals $1$ if and only if~\eqref{eq:socp} is feasible for \emph{every} $j\in\mathcal O(\xk)$ at action $\hat{\mathbf u}$, context $\o$, and safety parameter $\gamma$.
+Let \(v_\gamma(\hat{\mathbf u};\o) \in \{0, 1\}\) be an indicator function that equals $1$ if and only if~\eqref{eq:socp} is feasible for \emph{every} $j\in\mathcal O(\xk)$ at action $\hat{\mathbf u}$, context $\o$, and safety parameter $\gamma$.
 The \textit{valid action set} is defined as
 \begin{equation}
     \Omega^\star(\o,\gamma)
@@ -760,9 +781,9 @@ This quantitative result supports that Alg.~\ref{alg:sfe} expands the generable 
 % TODO: Under the idealized expansion process at a fixed context, the lower bound on the probability that a generated batch contains a valid action is nondecreasing in the number of expansion rounds. 
 Also, the higher validity observed at larger $\gamma$ at test time across tasks is consistent with~\Cref{prop:gamma-effect}, as the relaxed verifier condition enlarges the set of actions certified as valid.
 
-Across 3 seeds with 100 evaluation episodes each in the 3D cluttered task at $\gamma=0.3$, collision rates were 8.3\% for the pretrained CFM, 20.7\% for CFM-MPPI, and 2.3\% for SFE at $\theta_{10}$. 
+Across 3 seeds with 100 simulated episodes each in the 3D cluttered task at $\gamma=0.3$, collision rates were 8.3\% for the pretrained CFM, 20.7\% for CFM-MPPI, and 2.3\% for SFE at $\theta_{10}$. 
 The finite-horizon DCBF condition \emph{includes} pointwise safety at the first predicted step. The lower collision rates complement the increased validity by showing improved closed-loop safety under receding-horizon execution. 
-% TODOCollision rates for other tasks are omitted due to space constraints.
+% TODO Collision rates for other tasks are omitted due to space constraints.
 % The adaptation tasks show narrower confidence intervals than the generalization tasks. Adaptation evaluates its 100 test rollouts on one fixed OOD configuration, so variation comes from policy sampling alone. Generalization evaluates independently sampled configurations, which adds variance across configurations. 
 %Generalization evaluates independently sampled obstacle configurations, which includes variability from independently sampled obstacle configurations, whereas adaptation is evaluated on a single fixed OOD configuration.
 \subsection{Safe Mode Discovery in OOD Environments}
