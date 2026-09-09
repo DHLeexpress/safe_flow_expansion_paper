@@ -11,7 +11,7 @@ The verifier $v_\gamma$ is deterministic. Thus, the random variable $Y$ below is
 \begin{assumption}[Analysis model, {\cite[App.~F]{de2026active}}]
 \label{assumptions:afe}
 Fix $(\o,\gamma)$ and a validity threshold $p_{\min}\in(0,1)$.
-(i) The auxiliary binary observation follows the RKHS logistic model $\Pr[Y=1\mid\hat{\mathbf u}]=\varsigma(g(\phi_s(\hat{\mathbf u};\o,\gamma)))$, for which anytime confidence sequences exist~\cite{pasztor2024bandits}, with $\varsigma$ the $L_\varsigma$-Lipschitz sigmoid, $g\circ\phi_s(\cdot;\o,\gamma)\in\mathcal H_{k_\phi^{\o,\gamma}}$, $\|g\circ\phi_s(\cdot;\o,\gamma)\|_{k_\phi^{\o,\gamma}}\le B_g$, $g$ is $L_g$-Lipschitz in a metric $d$, and $\phi_s$ frozen over the query sequence.
+(i) The auxiliary binary observation follows the RKHS logistic model $\Pr[Y=1\mid\hat{\mathbf u}]=\varsigma(\psi(\phi_s(\hat{\mathbf u};\o,\gamma)))$, for which anytime confidence sequences exist~\cite{pasztor2024bandits}, with $\varsigma$ the $L_\varsigma$-Lipschitz sigmoid, $\psi\circ\phi_s(\cdot;\o,\gamma)\in\mathcal H_{k_\phi^{\o,\gamma}}$, $\|\psi\circ\phi_s(\cdot;\o,\gamma)\|_{k_\phi^{\o,\gamma}}\le B_g$, $\psi$ is $L_\psi$-Lipschitz in a metric $d$, and $\phi_s$ frozen over the query sequence.
 (ii) Queried actions lie in a compact subset of $\mathcal U^H$ on which
 $k_\phi^{\o,\gamma}\le1$.
 (iii) Each CFM update uses the energy-based model update described
