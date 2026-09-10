@@ -96,10 +96,11 @@ Second, for generative policy learning, we introduce Safe Flow Expansion (SFE) t
 % Algorithms in this family include model predictive path integral control (MPPI)~\cite{williams2016aggressive}, predictive sampling~\cite{howell2022predictive}, and cross-entropy methods~\cite{rubinstein1999cross}.
 %Conditional Flow Matching (CFM) has emerged as a promising alternative to diffusion-based modeling, offering competitive generation quality with efficient sampling~\cite{chisari2024learning, ye2024efficient}.  
 Sampling-based predictive control (SBPC) is an alternative to gradient-based model predictive control (MPC), where a simple sampling procedure replaces a sophisticated nonlinear optimizer~\cite{howell2022predictive}. SBPC algorithms are particularly well-suited to recent advances in parallel computing architectures~\cite{mjx}, enabling them to scale to complex problems like in-hand dexterous manipulation~\cite{li2025drop}, legged locomotion~\cite{alvarez2025real}, and more~\cite{howell2022predictive}. 
-These algorithms share deep connections with generative control techniques like diffusion-based~\cite{chi2023diffusion} and flow matching-based policies~\cite{mizuta2025unified}. SBPC demonstrations can \emph{agnostically} deal with a robot's fast nonlinear dynamics and morphology that generative policies learn to imitate~\cite{Kurtz_GPC}, with both data generation and policy training benefiting from parallel computation. 
+These algorithms have recently shared deep connections with generative control techniques like diffusion-based~\cite{chi2023diffusion} and flow matching-based policies~\cite{mizuta2025unified}. SBPC demonstrations can \emph{agnostically} deal with a robot's fast nonlinear dynamics and morphology that generative policies learn to imitate~\cite{Kurtz_GPC}.
+%, with both data generation and policy training benefiting from parallel computation. 
 Despite these advantages, SBPCs such as model predictive path integral control (MPPI) inherently struggle with safety guarantees. While this approach encourages safe behavior, it lacks explicit safety guarantees because the procedure relies on sampling and averaging. In particular, MPPI safety constraints are usually incorporated indirectly through penalty terms in the path planning cost function~\cite{williams2017model, yin2023shield}. Even if individual sampled trajectories satisfy safety constraints, their weighted average may not. This limitation motivates our goal of integrating safety-critical constraints in SBPC.
 
-Generative models, such as diffusion and flow matching~\cite{lipman2022flow}, can synthesize motion trajectories and action sequences from diverse, high-dimensional demonstrations~\cite{chi2023diffusion, Kurtz_GPC}, with inference-time guidance to tightly trade off safety and performance~\cite{mizuta2025unified}.
+Generative models, such as diffusion and flow matching~\cite{lipman2022flow}, can synthesize motion trajectories and action sequences from diverse, high-dimensional demonstrations~\cite{chi2023diffusion, Kurtz_GPC}, with inference-time guidance~\cite{mizuta2025unified}.
 However, these models also do not natively provide formal safety guarantees, and guidance alone may not sufficiently increase the probability of safe and multi-modal behaviors~\cite{dandapanthula2026we}.
 % TODO: safety guarantee fails in OOD
 Recent CFM-based works incorporate explicit safety constraints at inference time during sampling~\cite{utkarsh2026physics}, or through constrained optimal control~\cite{li2026hardflow}, while keeping the pretrained policy fixed.
@@ -141,14 +142,12 @@ Because a single parameter $\gamma$ modulates our safety constraint and conditio
 We introduce \emph{MPPI-DCBF}, which certifies safety against MPPI's averaging process by restricting rollouts to a common convex polytope, with modest computational overhead compared to vanilla MPPI.
 This approach provides single-step safety certification under nonlinear control-affine dynamics and the entire predicted horizon for LTI systems. While establishing recursive feasibility remains future work, as with optimization-based MPC-CBF~\cite{zeng2021safety,zeng2021enhancing}.
 % MPPI-DCBF requires only $25\%$ more computation than vanilla MPPI. 
-
 \textbf{(ii)}  
 We introduce {\em Safe Flow Expansion} (SFE) for CFM policies.
 %, conditioned on $\gamma$ to tune their safety level. 
 When the policy must operate in conditions that are OOD from its training data, 
 SFE self-generates actions with uncertainty guidance, verifies them under the same finite-horizon DCBF conditions, and continues pretraining on valid actions to expand the \emph{generable set}~\cite{de2026active}.
 SFE improves action validity and discovers new safe modes in OOD environments using only one generated action per replanning step.
-
 \textbf{(iii)} 
 We evaluate the framework in 2D cluttered and pedestrian environments and on a 3D quadrotor, in simulation and on hardware, and we show MPPI-DCBF on a 7-DoF manipulator among non-convex obstacles.
 Under the stated assumptions, we connect MPPI-DCBF demonstrations to an initial safe set for SFE's expansion analysis
@@ -185,12 +184,12 @@ We study discrete-time dynamical systems of the form
 \x_{k+1}=f(\x_k)+g(\x_k)\u_k,
 \label{eq:dynamical_system}
 \end{equation}
-where $f,g$ are continuous and $k\in\mathbb Z$, $\x_k\in\mathcal X\subseteq\mathbb R^{n_x}$ is the state and $\u_k\in\mathcal U\subseteq\mathbb R^{n_u}$ is the control input. At each replanning step $k$, let $\x_{k+i}$ and $\u_{k+i}$ denote the predicted state and planned control within the current horizon, initialized at the current state $\x_k$.
+where $f,g$ are continuous and $k\in\mathbb Z$, $\x_k\in\mathcal X\subseteq\mathbb R^{n_x}$ is the state and $\u_k\in\mathcal U\subseteq\mathbb R^{n_u}$ is the control input at time $t_k$. At each $t_k$ with sampling time \(\Delta t\) fixed, the controller plans $H$ control inputs $\u_{k+i}$, predicts states $\x_{k+i}$ for horizon $i=0,\cdots,H-1$, at time $t_{k+i}=t_k+i\Delta t$, respectively.
 
 \subsection{Model Predictive Path Integral control}
 For control system~\eqref{eq:dynamical_system}, MPPI optimizes a mean control sequence in a convex admissible set $\mathcal U$ over horizon $H$ by sampling and cost-based reweighting~\cite{williams2016aggressive}.
-It samples $M$ candidate sequences around the previous solution shifted one step, $\bar{\mathbf u}_{k+i}$, using $\mathbf u^{(m)}_{k+i}=\bar{\mathbf u}_{k+i}+\varepsilon^{(m)}_{k+i}$ with $\varepsilon^{(m)}_{k+i}\sim\mathcal N(0,\Sigma)$, for $m=1,\ldots,M$ and $i=0,\ldots,H-1$.
-Each candidate is simulated from $\x_k$ using~\eqref{eq:dynamical_system} to evaluate its cost
+It samples $M$ candidate sequences $\mathbf u^{(m)}_{k+i}=\bar{\mathbf u}_{k+i}+\varepsilon^{(m)}_{k+i}$ around the previous solution shifted one step $\bar{\mathbf u}_{k+i}$ to warm-start the optimization, where $\varepsilon^{(m)}_{k+i}\sim\mathcal N(0,\Sigma)$, for $m=1,\ldots,M$.
+Each candidate is initialized from $\x_k$ and propagate~\eqref{eq:dynamical_system} to evaluate its cost
 \begin{equation}
 \setlength{\jot}{0pt}
 S^{(m)}\!=\!\phi\bigl(\mathbf{x}^{(m)}_{k+H}\bigr)
@@ -199,7 +198,7 @@ S^{(m)}\!=\!\phi\bigl(\mathbf{x}^{(m)}_{k+H}\bigr)
 \label{eq:mppicost}
 \end{equation}
 where $q$ and $\phi$ are the stage and terminal state costs, $R\in\mathbb R^{n_u\times n_u}$ is the control weight, and $\Sigma$ is the sampling covariance.
-MPPI then updates the mean using weights $\omega_m=\exp(-(S^{(m)}-S_{\min})/\lambda)$, where $S_{\min}=\min_\ell S^{(\ell)}$ and $\lambda>0$ is the temperature:
+MPPI then optimizes a mean control sequence using weights $\omega_m=\exp(-(S^{(m)}-S_{\min})/\lambda)$, where $S_{\min}=\min_\ell S^{(\ell)}$ and $\lambda>0$ is the temperature:
 \begin{equation}
 \mathbf u^\star_{k+i}
 =
@@ -209,37 +208,8 @@ MPPI then updates the mean using weights $\omega_m=\exp(-(S^{(m)}-S_{\min})/\lam
 \label{eq:mppi-update}
 \end{equation}
 Only the first control $\uk^\star$ is applied before replanning.
-This parallelizable sampling process is well-suited to solving non-convex optimal control problems on GPU hardware. However, a key challenge arises in safety-critical applications. Prior work incorporate DCBF-based penalties 
-% TODO Not a clear statement
-toward safety without certifying it~\cite{yin2023shield}, or executes among the lowest-cost rollouts under a CBF filter~\cite{rabiee2024guaranteed}.
+This parallelizable sampling process is well-suited to solving non-convex optimal control problems on GPU hardware. However, a key challenge arises in safety-critical applications. Prior work incorporates safety through the cost function~\cite{williams2016aggressive}, with gradient-based optimization~\cite{yin2023shield}, or by executing the lowest-cost candidate sequences under a CBF filter~\cite{rabiee2024guaranteed}.
 % TODO introduce averaging issue here? or later?
-% To control system (\ref{eq:dynamical_system}), 
-% %at state $\xk\in\mathbb R^{n_x}$, 
-% MPPI optimizes a mean control sequence $\{ \uki \}_{i=0}^{H-1}$ in a convex admissible set $\mathcal U$ over horizon $H$ by forward sampling and Monte Carlo reweighting~\cite{williams2016aggressive}, warm started from the previous solution shifted one step, $\bar{\mathbf{u}}_{k+i}$. For rollout $m=1,\dots,M$ with perturbations $\varepsilon^{(m)}_{k+i}\!\sim\!\mathcal{N}(0,\Sigma)$, the sampled controls, states, and costs are
-% \begin{subequations}
-% \begin{align}
-% &\mathbf{u}^{(m)}_{k+i}=\bar{\mathbf{u}}_{k+i}+\varepsilon^{(m)}_{k+i},\label{eq:mppi_rollout}\;\mathbf{x}^{(m)}_{k+i+1}=f\!\bigl(\mathbf{x}^{(m)}_{k+i},\,\mathbf{u}^{(m)}_{k+i}\bigr),\\
-% %
-% &S^{(m)}\!=\!\phi\bigl(\mathbf{x}^{(m)}_{k+H}\bigr)
-% \!+\!\!\sum_{i=0}^{H-1}\Big(\!q\,\!\bigl(\mathbf{x}^{(m)}_{k+i}\bigr)\!+\!\tfrac{1}{2}\,\mathbf{u}^{(m)\top}_{k+i} R\,\mathbf{u}^{(m)}_{k+i}\Big)\label{eq:mppicost}
-% \end{align}
-% \end{subequations}
-% with state cost $q: \mathbb{R}^{n_x} \rightarrow \mathbb{R}$, terminal cost $\phi : \mathbb{R}^{n_x} \rightarrow \mathbb{R}$,  control disturbance variance $\Sigma$, control weight $R \in \mathbb{R}^{n_u \times n_u}$. Soft-min weights with temperature $\lambda>0$, stabilized by subtracting $S_\text{min}$, define the update for $i\in\{0,\cdots,H-1\}$,
-% \begingroup
-% \setlength{\jot}{0pt}
-% \begin{align}
-% &\omega_m\!:=\!\exp(-(S^{(m)}\!\!-\!S_{\min})/\lambda),
-% \;S_{\min}\!:=\!\min_{\ell=1,\ldots,M}S^{(\ell)}.
-% \label{eq:mppi-weights}\\
-% &\Delta\mathbf u_{k+i}\!=\!
-% \frac{\sum_{m=1}^{M}\omega_m\,\varepsilon^{(m)}_{k+i}}
-%      {\sum_{m=1}^{M}\omega_m},\;
-% \mathbf u^\star_{k+i}\!\leftarrow\!
-% \bar{\mathbf u}_{k+i}\!+\!\Delta\mathbf u_{k+i}.
-% \label{eq:mppi-update}
-% \end{align}
-% \endgroup
-% Only control $\uk^\star$ is applied before replanning. This parallelizable sampling process~\eqref{eq:mppi_rollout} is well-suited to solving non-convex optimal control problems on GPU hardware. However, a key challenge arises in safety-critical applications. Prior work incorporate DCBF-based penalties toward safety without certifying it~\cite{yin2023shield}, or executes among the lowest-cost rollouts under a CBF filter~\cite{rabiee2024guaranteed}.
 
 \subsection{Discrete-Time Control Barrier Functions}
 Let \(\mathcal{C}=\{\x\!\in\!\mathbb{R}^{n_x}\!:\!h(\x)\!\ge\!0\}\) denote the \emph{safe set} for a continuous $h$.
@@ -331,8 +301,6 @@ Active Flow Expansion enlarges the \textit{$\tau$-generable set} $\Omega^\tau_\t
 Each round self-generates samples with uncertainty guidance and verifier feedback to update the model. %candidates, prioritizes those with the highest verifier uncertainty, and continues pretraining on valid samples.
 We adopt this framework for our CFM policy using a finite-horizon DCBF verifier to determine sample validity. Section~\ref{sec:analysis} provides the theoretical analysis.
 
-
-
 \begin{figure}
     \centering
     \includegraphics[width=\linewidth]{images/robotarm_v2.pdf}
@@ -341,6 +309,7 @@ We adopt this framework for our CFM policy using a finite-horizon DCBF verifier 
     \label{fig:robotarm}
     \vskip -0.25 true in
 \end{figure}
+
 \section{Problem Definition}
 \label{sec:problemdefinition}
 At each replanning step, let $J(\hat{\mathbf u};\x_k)$ denote the cost of the nominal rollout by the control $\hat{\mathbf u}$ from $\x_k$, using the stage and terminal costs in~\eqref{eq:mppicost}. We use an ego-centric safety function $h(\cdot;\x_k)$, frozen over the horizon, whose nonnegative superlevel set lies in free space and which satisfies $h(\x_k;\x_k)=1$. We formulate safe planning as
