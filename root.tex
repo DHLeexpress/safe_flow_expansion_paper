@@ -151,7 +151,7 @@ SFE improves action validity and discovers new safe modes in OOD environments us
 \textbf{(iii)} 
 We evaluate the framework in 2D cluttered and pedestrian environments and on a 3D quadrotor, in simulation and on hardware, and we show MPPI-DCBF on a 7-DoF manipulator among non-convex obstacles.
 Under the stated assumptions, we connect MPPI-DCBF demonstrations to an initial safe set for SFE's expansion analysis
-and derive a lower bound on the probability that a generated batch contains a valid action at a fixed context and $\gamma$. We further show how the number of batches and $\gamma$ affect the safety-performance tradeoff.
+and derive a lower bound on the probability that a generated batch contains a valid action at a fixed context and $\gamma$. We further show how the number of batches and $\gamma$ trade off safety and performance.
 % SFE self-generates actions with uncertainty guidance, verifies them under the same finite-horizon DCBF conditions, and continues pretraining on the valid ones in order to expand the \emph{generable set}~\cite{de2026active} (the range of behaviors the FM model can generate).
 % SFE discovers valid OOD modes that the pretrained policy misses.
 %We formulate our approach in terms of tunable safety parameter $\gamma$. 
@@ -208,7 +208,8 @@ MPPI then optimizes a mean control sequence using weights $\omega_m=\exp(-(S^{(m
 \label{eq:mppi-update}
 \end{equation}
 Only the first control $\uk^\star$ is applied before replanning.
-This parallelizable sampling process is well-suited to solving non-convex optimal control problems on GPU hardware. However, a key challenge arises in safety-critical applications. Prior work incorporates safety through the cost function~\cite{williams2016aggressive}, with gradient-based optimization~\cite{yin2023shield}, or by executing the lowest-cost candidate sequences under a CBF filter~\cite{rabiee2024guaranteed}. 
+%This parallelizable sampling process is well-suited to solving non-convex optimal control problems on GPU hardware. However, a key challenge arises in safety-critical applications. 
+Prior work incorporates safety through the cost function~\cite{williams2016aggressive}, with gradient-based optimization~\cite{yin2023shield}, or by executing the lowest-cost candidate sequences under a CBF filter~\cite{rabiee2024guaranteed}. 
 % TODO introduce averaging issue here? or later?
 While these methods can be practical, they do not address that MPPI during the convex averaging process~\eqref{eq:mppi-update} can achieve a formal safety certificate. 
 
