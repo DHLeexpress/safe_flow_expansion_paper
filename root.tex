@@ -107,7 +107,7 @@ Recent CFM-based works incorporate explicit safety constraints at inference time
 Such optimization adds inference-time computation and provides a constraint certificate \emph{only} when a feasible solution is obtained.
 % These formal safety guarantees shift the safety certificate to an additional optimization process, adding computational burden and raising feasibility concerns. 
 % Such optimization provides a constraint certificate \emph{only} when it finds a feasible control from the pretrained policy. 
-With a fixed pretrained policy, this often fails in out-of-distribution (OOD) contexts when demonstrations poorly cover required behaviors~\cite{luo2024potential}. This limitation motivates our goal of offline OOD adaptation via continued pre-training of the CFM policy.
+In out-of-distribution (OOD) contexts, safety guarantees will fail in a fixed pretrained policy~\cite{luo2024potential}. This limitation motivates our goal of offline OOD adaptation via continued pre-training of the CFM policy.
 % In flow-based planners, repeated interventions on intermediate samples can also distort the learned flow and produce incomplete paths~\cite{yang2026safeflowmatcher}.
 % Recent CFM-based works incorporate explicit safety constraints at inference time by trajectory regularization~\cite{utkarsh2026physics}, constrained generation~\cite{li2026hardflow}, and reward-based guidance~\cite{mizuta2025unified}. In out-of-distribution (OOD) contexts, these methods rely on a fixed pretrained policy, 
 % % which may assign low probability to safe and multi-modal behaviors, and 
@@ -152,6 +152,7 @@ SFE improves action validity and discovers new safe modes in OOD environments us
 We evaluate the framework in 2D cluttered and pedestrian environments and on a 3D quadrotor, in simulation and on hardware, and we show MPPI-DCBF on a 7-DoF manipulator among non-convex obstacles.
 Under the stated assumptions, we connect MPPI-DCBF demonstrations to an initial safe set for SFE's expansion analysis
 and derive a lower bound on the probability that a generated batch contains a valid action at a fixed context and $\gamma$. We further show how the number of batches and $\gamma$ trade off safety and performance.
+We further evaluate how $\gamma$ and deployment batch size trade off safety and performance.
 % SFE self-generates actions with uncertainty guidance, verifies them under the same finite-horizon DCBF conditions, and continues pretraining on the valid ones in order to expand the \emph{generable set}~\cite{de2026active} (the range of behaviors the FM model can generate).
 % SFE discovers valid OOD modes that the pretrained policy misses.
 %We formulate our approach in terms of tunable safety parameter $\gamma$. 
@@ -226,10 +227,10 @@ $\u_k\in\mathcal U$ satisfying
 If $\x_0\in\mathcal C$ and \eqref{eq:dtcbf} holds
 at every step, then \(h(\x_k)\!\ge\!(1-\gamma)^{k}\,h(\x_0)\), so the fixed set $\mathcal{C}$ is forward invariant~\cite{ames2014cbf,agrawal2017discrete}.
 
-In this paper, our safety specification is obstacle avoidance. We first model the robot as a point $\q=\piq(\x)$,
+Our safety specification is obstacle avoidance. We first model the robot as a point $\q=\piq(\x)$,
 where $\piq:\mathbb R^{n_x}\to\mathbb R^d$ is a linear projection that maps the robot state to position. 
-Let $\mathcal I(\xk)\subset\mathbb N$ index the obstacles observed at $\xk$.
-For each $j\in\mathcal I(\xk)$, let $\p_j$ be its closest  point to $\qk$ and $\n_j$ its outward unit normal. Assuming $\n_j^\top(\qk-\p_j)>0$, define
+Let $\mathcal I(\xk)\subset\mathbb N$ index the convex obstacles observed at $\xk$.
+For each $j\in\mathcal I(\xk)$, let $\p_j$ be its closest  point to $\qk$ and $\n_j$ its outward unit normal. Assume \(\n_j^\top(\qk-\p_j)>0\), define
 \begin{equation}
 h_j^{\mathrm{aff}}(\x;\xk) :=\n_j^\top(\q-\p_j)/\n_j^\top(\q_{k}-\mathbf{p_j}).
 \label{eq:aff_barrier}
@@ -339,8 +340,10 @@ J(\hat{\mathbf u};\x_k)\\
 Direct optimization with a non-convex $h$ does not generally guarantee recursive feasibility for this problem and often makes real-time implementation computationally intractable~\cite{rawlings2020model}.
 We address the safety constraint~\eqref{eq:poly} by constructing safety functions that define a convex inner approximation of the free space suited to online planning and offline policy expansion. 
 
-In particular, we define the \emph{nominal} and \emph{verifier} polytopes, whose superlevel sets specify the finite-horizon DCBF constraints for online MPPI and offline CFM policy expansion, respectively.
+In particular, the \emph{nominal} and \emph{verifier} polytopes in the following section define safety functions whose superlevel sets specify the finite-horizon DCBF constraints for online MPPI and offline CFM policy expansion, respectively.
+In both cases, $h$ is constructed from $\xk$ and the observed obstacle $\mathcal I(\xk)$ and is fixed over the prediction horizon $i=1,\cdots,H$.
 The bounds $(1-\gamma)^i$ derive from the finite-horizon DCBF condition, with smaller $\gamma$ imposing stricter safety margins and restricting the feasible action set~\cite{zeng2021enhancing}.
+
 % Direct optimization with a non-convex $h$ does not generally guarantee recursive feasibility for this problem and often makes real-time implementation computationally intractable~\cite{rawlings2020model}. 
 % We therefore keep a convex inner approximation of the free space and impose, in a receding-horizon fashion, that the evolution of $h$ follows the decay $(1-\gamma)^i$ with respect to the horizon $i$ rather than a fixed level.
 % From the view of set invariance, $\gamma$ modulates the trade-off between \textit{safety and feasibility}~\cite{zeng2021enhancing}. For example, a small $\gamma$ restricts the safety function to higher values, at the cost of reduced feasibility.
@@ -450,7 +453,7 @@ All MPPI-DCBF trajectories reach the goal without collision. $\gamma=0.1$ achiev
 % In a nonconvex free space, however, a single shared region (\textit{e.g.,} Eq.~\eqref{eq:nominalpolytope}) may exclude collision-free rollouts in other local modes, even when enlarged~\cite{deits2015computing}. Therefore, to expand a generative policy into these unexplored safe modes, we design the verifier to keep the same conditions but build the separating half-spaces around the queried action, thereby verifying the actions the original planner excludes (See Fig.~\ref{fig:pedestrian}(a)).
 We now turn to expand the generative policy beyond the MPPI-DCBF demonstrations. In nonconvex free space, the nominal polytope~\eqref{eq:nominalpolytope} may exclude collision-free rollouts in other modes~\cite{deits2015computing}. We therefore define a verifier that searches for separating half-spaces around each queried action to certify the same finite-horizon safety specification~\eqref{eq:poly}.
 
-For a queried action $\hat{\mathbf u}$, let $\x_{k+i},i\!=\!0,\!\ldots\!,H$, denote the resulting predicted states. For each convex configuration-space obstacle \(j\!\in\!\mathcal O(\xk)\), represented as \(\mathcal O_j\!:=\!\{\q\!\in\!\mathbb R^d\!:\!\|\q\!-\!\oj\|_2\!\le\! r_j\},\)
+For a queried action $\hat{\mathbf u}$, let $\x_{k+i},i\!=\!0,\!\ldots\!,H$, denote the resulting predicted states. For each convex configuration-space obstacle \(j\!\in\!\mathcal I(\xk)\), represented as \(\mathcal O_j\!:=\!\{\q\!\in\!\mathbb R^d\!:\!\|\q\!-\!\oj\|_2\!\le\! r_j\},\)
 the verifier constructs a separating half-space \(\mathbf a_j^\top(\mathbf q-\qk)\le m_j,\)
 by solving the maximization problem
 \noindent
