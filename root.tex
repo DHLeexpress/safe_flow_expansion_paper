@@ -8,10 +8,13 @@
 \usepackage{amssymb}
 \usepackage{amsmath}
 \usepackage{cleveref}
+\let\proof\relax
+\let\endproof\relax
 \usepackage{amsthm}
 \makeatletter
 \def\thm@space@setup{\thm@preskip=2pt\thm@postskip=2pt}
 \makeatother
+\let\labelindent\relax
 \usepackage{enumitem}
 \usepackage{stfloats}
 \usepackage[ruled,vlined]{algorithm2e}
@@ -76,19 +79,27 @@
 % % \author{Dohyun Lee$^{1}$, Minhyuk Jang$^{2}$,  Vince Kurtz$^{3}$, David E. J. van Wijk$^{1}$, and Joel W. Burdick$^{1}$}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \title{\LARGE \bf
-Safe Flow Expansion: Discovering Safe Robot Behaviors in Out-of-Distribution Motion Planning
+Finite-horizon Safety for \\Sampling-based Predictive Control and Generative Policy Expansion
+% Safe Flow Expansion: Discovering Safe Robot Behaviors in Out-of-Distribution Motion Planning
 }
 \begin{document}
 \maketitle
 \thispagestyle{empty}
 \pagestyle{empty}
 \begin{abstract}
-Sampling-based predictive control and generative policies both sample candidate action sequences, yet standard sampling alone does not guarantee that a sequence stays safe over the prediction horizon.
-We present a unified framework that incorporates explicit safety conditions into both online planning and generative policy learning.
+% Sampling-based predictive control and generative policies both sample candidate action sequences, yet standard sampling alone does not guarantee that a sequence stays safe over the prediction horizon.
+Sampling-based predictive control and generative policies plan robot motion by sampling candidate action sequences. However, sampling alone does not guarantee safety over the prediction horizon, and pretrained policies may poorly cover safe behaviors in out-of-distribution (OOD) environments. 
+% We present a unified framework that incorporates explicit safety conditions into both online planning and generative policy learning.
 % We present a unified paradigm for safe sampling-based motion planning in which a single safety parameter $\gamma$ specifies the finite-horizon discrete-time control barrier function (DCBF) conditions used by the planner and verifier and also conditions the generative policy. 
+We present a unified framework that incorporates finite-horizon discrete-time control barrier function (DCBF) conditions into both online planning and generative policy learning. 
 % TODO use hourglass model, put later
-Our first stand-alone contribution is MPPI-DCBF, which rejects rollouts that violate a convex safety condition before MPPI's weighted averaging process, so that the executed step inherits a guaranteed safety certificate. 
-Second, for generative policy learning, we introduce Safe Flow Expansion (SFE) to improve safety in OOD domains.  SFE self-generates actions from a conditional flow matching (CFM) policy, verifies them with the same condition, and updates the policy toward its valid actions. We derive a lower bound on the probability that a batch of generated actions contains a valid action. In 2D and 3D simulation and on Crazyflie hardware, the expanded policy achieves higher validity than the pretrained policy and higher mode coverage than the pretrained and guided baselines, and it replans with far lower latency than online planners.
+% Our first stand-alone contribution is MPPI-DCBF, which rejects rollouts that violate a convex safety condition before MPPI's weighted averaging process, so that the executed step inherits a guaranteed safety certificate. 
+First, MPPI-DCBF rejects rollouts that violate a common convex safety condition before MPPI's weighted averaging, preserving one-step safety. 
+% Second, for generative policy learning, we introduce Safe Flow Expansion (SFE) to improve safety in OOD domains.  SFE self-generates actions from a conditional flow matching (CFM) policy, verifies them with the same condition, and updates the policy toward its valid actions.
+Second, Safe Flow Expansion (SFE) self-generates actions from a conditional flow matching (CFM) policy, verifies them under the same safety specification, and updates the policy toward valid actions (\textit{i.e.}, those satisfying the safety specifications).
+% We derive a lower bound on the probability that a batch of generated actions contains a valid action. In 2D and 3D simulation and on Crazyflie hardware, the expanded policy achieves higher validity than the pretrained policy and higher mode coverage than the pretrained and guided baselines, and it replans with far lower latency than online planners.
+Under an idealized expansion process, we derive a lower bound on the probability that a generated batch contains a valid action.
+In four OOD tasks, expansion improves validity over the pretrained policy. Hardware experiments demonstrate higher observed mode coverage than the pretrained and guided baselines. Single-action generation is approximately $\mathrm{12\times}$ and $\mathrm{50\times}$ faster than MPPI-DCBF and CFM-MPPI replanning, respectively.
 \end{abstract}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
