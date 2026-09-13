@@ -1,13 +1,13 @@
 \section{Appendix: Analysis Details for SFE}
 \label{app:sfe-analysis}
-
-We apply the generable set expansion analysis of~\cite{de2026active} directly in the SFE action space. The cited theorem is written in a learned representation space, whereas our verifier~\eqref{eq:verifier-certified-set} and conditional generable set~\eqref{eq:conditional-generable-set} are defined on $\mathcal U^H$. We therefore state its conditions on $\mathcal U^H$ and use the representation only through the frozen kernel
+We state the conditions of~\cite[Thm.~F.5]{de2026active} directly on $\mathcal U^H$ using the frozen kernel
+% We apply the generable set expansion analysis of~\cite{de2026active} directly in the SFE action space. The cited theorem is written in a learned representation space, whereas our verifier~\eqref{eq:verifier-certified-set} and conditional generable set~\eqref{eq:conditional-generable-set} are defined on $\mathcal U^H$. We therefore state its conditions on $\mathcal U^H$ and use the representation only through the frozen kernel
 \begin{equation}
 k_{\phi}^{\o,\gamma}(\hat{\mathbf u},\hat{\mathbf u}')
 :=k(\phi_s(\hat{\mathbf u};\o,\gamma),\phi_s(\hat{\mathbf u}';\o,\gamma)).
 \end{equation}
-
-The verifier $v_\gamma$ is deterministic. Thus, the random variable $Y$ below is used only by the probabilistic model in the analysis which is not the verifier output. Deterministic validity is imposed separately through the common set with $\Omega^\star(\o,\gamma)$.
+% The verifier $v_\gamma$ is deterministic. Thus, the random variable $Y$ below is used only by the probabilistic model in the analysis which is not the verifier output. Deterministic validity is imposed separately through the common set with $\Omega^\star(\o,\gamma)$.
+The auxiliary observation $Y$ in Assumption~\ref{assumptions:afe} is distinct from the deterministic labels produced by $v_\gamma$.
 \begin{assumption}[Analysis model, {\cite[App.~F]{de2026active}}]
 \label{assumptions:afe}
 Fix $(\o,\gamma)$ and a validity threshold $p_{\min}\in(0,1)$.
@@ -36,5 +36,7 @@ R_\epsilon^r(S_0)
 satisfies
 $\Pr(\mathcal E_{\mathrm{cov}})\ge1-\delta$.
 \end{lemma}
-Here $T^\star$ counts sequential queries and model updates in the analysis at fixed $(\o,\gamma)$. Alg.~\ref{alg:sfe} uses batched acquisition and updates across contexts, so its total verifier count is distinct from this analysis budget.
+% Alg.~\ref{alg:sfe} uses batched acquisition and updates across contexts, so its total verifier count is distinct from this analysis budget.
+Alg.~\ref{alg:sfe} queries the verifier in batches and updates the policy using data from multiple contexts.
+Its total number of verifier calls therefore does not directly correspond to $T^\star$.
 % Here $T^\star$ is the number of sequential query and model update steps performed at $(\o,\gamma)$. In practice, Alg.~\ref{alg:sfe} freezes $\theta_n$ and $\sigma_n$ within a batch and combines data from different contexts. Therefore, we cannot use its total number of verifier evaluations directly as $T^\star$. Combining data from different contexts does not change the definitions of $\mathcal A_{\gamma,r}(\o)$ or $m_{\gamma,r}(\o)$. However, the probability $1-\delta$ applies separately to each context. During SFE acquisition, $v_\gamma$ evaluates every candidate action before cost-based execution. 
